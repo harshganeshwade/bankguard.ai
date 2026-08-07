@@ -12,6 +12,57 @@ export interface RandomForestPrediction {
   primaryReason: string;
   recommendedAction: string;
   featureImportance: FeatureImportance[];
+  ensembleDetails?: {
+    totalTrees: number;
+    fraudVotes: number;
+    safeVotes: number;
+    voteConsensusPercent: number;
+  };
+  engine?: string;
+}
+
+/**
+ * Async predictor calling the genuine trained Python Scikit-Learn Random Forest model (100 Decision Trees)
+ */
+export async function predictFraudRandomForestAsync(
+  features: RandomForestFeatures
+): Promise<RandomForestPrediction> {
+  try {
+    const response = await fetch("/api/ml/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(features),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        const featImp: FeatureImportance[] = (data.featureImportance || []).map((fi: any) => ({
+          featureName: fi.feature,
+          contributionPercent: fi.importance,
+          reasonText: `Feature weight ${fi.importance}% derived from 100 decision trees`,
+          impactType: fi.importance >= 10 ? "high_risk" : fi.importance >= 5 ? "medium_risk" : "mitigating",
+        }));
+
+        return {
+          fraudProbability: data.fraudProbability,
+          riskScore: data.riskScore,
+          riskCategory: data.riskCategory,
+          isFraud: data.isFraud,
+          primaryReason: data.isFraud ? "High probability anomaly identified by Scikit-Learn Random Forest ensemble" : "Transaction aligns with standard historical behavior profile",
+          recommendedAction: data.recommendedAction,
+          featureImportance: featImp,
+          ensembleDetails: data.ensembleDetails,
+          engine: "Scikit-Learn RandomForestClassifier (100 Trees)",
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("ML API query failed, utilizing local Random Forest ensemble engine", err);
+  }
+
+  // Fallback to local synchronous prediction
+  return predictFraudRandomForest(features);
 }
 
 /**

@@ -1,0 +1,93 @@
+{
+  "modelType": "RandomForestClassifier",
+  "library": "scikit-learn",
+  "n_estimators": 100,
+  "max_depth": 12,
+  "totalSamples": 10000,
+  "features": [
+    "amount",
+    "avgDailySpend",
+    "spendRatio",
+    "distanceKm",
+    "isNewDevice",
+    "loginDeviceChanged",
+    "isVpnUsed",
+    "velocityScore",
+    "prevTransactions24h",
+    "failedLoginAttempts",
+    "beneficiaryAgeDays",
+    "timeHour",
+    "cardPresent"
+  ],
+  "metrics": {
+    "accuracy": 0.977,
+    "precision": 0.5,
+    "recall": 0.0217,
+    "f1": 0.0417,
+    "rocAuc": 0.9726,
+    "confusionMatrix": [
+      [
+        1953,
+        1
+      ],
+      [
+        45,
+        1
+      ]
+    ]
+  },
+  "featureImportance": [
+    {
+      "feature": "beneficiaryAgeDays",
+      "importance": 13.4
+    },
+    {
+      "feature": "distanceKm",
+      "importance": 12.02
+    },
+    {
+      "feature": "spendRatio",
+      "importance": 9.26
+    },
+    {
+      "feature": "amount",
+      "importance": 8.68
+    },
+    {
+      "feature": "velocityScore",
+      "importance": 8.64
+    },
+    {
+      "feature": "cardPresent",
+      "importance": 7.99
+    },
+    {
+      "feature": "avgDailySpend",
+      "importance": 7.53
+    },
+    {
+      "feature": "timeHour",
+      "importance": 7.07
+    },
+    {
+      "feature": "failedLoginAttempts",
+      "importance": 6.55
+    },
+    {
+      "feature": "isVpnUsed",
+      "importance": 5.65
+    },
+    {
+      "feature": "isNewDevice",
+      "importance": 4.86
+    },
+    {
+      "feature": "loginDeviceChanged",
+      "importance": 4.79
+    },
+    {
+      "feature": "prevTransactions24h",
+      "importance": 3.58
+    }
+  ]
+}

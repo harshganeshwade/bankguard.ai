@@ -2,14 +2,15 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
-import { createServer as createViteServer } from "vite";
+import { getDb } from "./src/db/index";
+import { sendMfaEmailViaGmail } from "./src/lib/gmailService";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentFilename = typeof __filename !== "undefined" ? __filename : (typeof import.meta !== "undefined" && import.meta.url ? fileURLToPath(import.meta.url) : "");
+const currentDirname = typeof __dirname !== "undefined" ? __dirname : path.dirname(currentFilename || process.cwd());
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(express.json());
 
@@ -26,7 +27,6 @@ async function startServer() {
   // DB Health & Status check
   app.get("/api/db/status", async (req, res) => {
     try {
-      const { getDb } = await import("./src/db/index");
       const db = getDb();
       if (!db) {
         return res.json({
@@ -56,7 +56,6 @@ async function startServer() {
         });
       }
 
-      const { sendMfaEmailViaGmail } = await import("./src/lib/gmailService");
       const result = await sendMfaEmailViaGmail({
         accessToken,
         recipientEmail,
@@ -73,6 +72,55 @@ async function startServer() {
       return res.json({ success: true, messageId: result.messageId });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message || String(err) });
+    }
+  });
+
+  // Scikit-Learn Trained Random Forest Fraud Model endpoints
+  app.get("/api/ml/model-info", async (req, res) => {
+    try {
+      const fs = await import("fs/promises");
+      const metadataPath = path.join(process.cwd(), "model", "model_metadata.json");
+      const data = await fs.readFile(metadataPath, "utf-8");
+      return res.json(JSON.parse(data));
+    } catch (err: any) {
+      return res.status(500).json({
+        error: "Failed to read Scikit-Learn Random Forest model metadata",
+        details: err?.message || String(err),
+      });
+    }
+  });
+
+  app.post("/api/ml/predict", async (req, res) => {
+    try {
+      const { execFile } = await import("child_process");
+      const payload = JSON.stringify(req.body);
+      
+      execFile("python3", ["predict.py", payload], (error, stdout, stderr) => {
+        if (error) {
+          console.error("Python ML Exec Error:", stderr || error.message);
+          return res.status(500).json({
+            error: "Scikit-Learn Random Forest prediction execution failed",
+            details: stderr || error.message,
+          });
+        }
+        try {
+          const parsed = JSON.parse(stdout.trim());
+          return res.json({
+            success: true,
+            ...parsed,
+          });
+        } catch (pErr) {
+          return res.status(500).json({
+            error: "Failed to parse Python ML output",
+            raw: stdout,
+          });
+        }
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        error: "Internal server error during ML prediction",
+        details: err?.message || String(err),
+      });
     }
   });
 
@@ -150,6 +198,7 @@ Generate a concise JSON response with:
 
   // Vite middleware for development vs static serve for production
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

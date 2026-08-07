@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldAlert,
   Cpu,
@@ -11,9 +11,11 @@ import {
   RefreshCw,
   Layers,
   BarChart2,
+  Database,
+  GitBranch,
 } from "lucide-react";
 import { RandomForestFeatures, FeatureImportance } from "../types";
-import { predictFraudRandomForest } from "../lib/fraudEngine";
+import { predictFraudRandomForest, predictFraudRandomForestAsync, RandomForestPrediction } from "../lib/fraudEngine";
 
 interface FraudDetectionViewProps {
   onAnalyzeWithGemini: (features: RandomForestFeatures) => Promise<any>;
@@ -46,11 +48,40 @@ export const FraudDetectionView: React.FC<FraudDetectionViewProps> = ({
     isCashDeposit: false,
   });
 
+  const [prediction, setPrediction] = useState<RandomForestPrediction>(() =>
+    predictFraudRandomForest(features)
+  );
+  const [modelInfo, setModelInfo] = useState<any>(null);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isMlLoading, setIsMlLoading] = useState(false);
 
-  // Run local Random Forest Ensemble engine
-  const prediction = predictFraudRandomForest(features);
+  // Fetch ML Model info once
+  useEffect(() => {
+    fetch("/api/ml/model-info")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.modelType) setModelInfo(data);
+      })
+      .catch((err) => console.warn("Failed to fetch ML model info", err));
+  }, []);
+
+  // Run async Scikit-Learn Random Forest prediction on feature changes
+  useEffect(() => {
+    let isMounted = true;
+    setIsMlLoading(true);
+
+    predictFraudRandomForestAsync(features).then((res) => {
+      if (isMounted) {
+        setPrediction(res);
+        setIsMlLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [features]);
 
   const handleRunGeminiAI = async () => {
     setIsAiLoading(true);
@@ -68,23 +99,46 @@ export const FraudDetectionView: React.FC<FraudDetectionViewProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2">
-          <Cpu className="w-6 h-6 text-[#38BDF8]" />
-          <h1 className="text-3xl font-bold text-[#bec6e0] font-headline-md">
-            Random Forest & Explainable AI (SHAP)
-          </h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Cpu className="w-6 h-6 text-[#38BDF8]" />
+              <h1 className="text-3xl font-bold text-[#bec6e0] font-headline-md">
+                Scikit-Learn Random Forest ML Pipeline
+              </h1>
+            </div>
+            <p className="text-sm text-[#c6c6cd] mt-1">
+              Genuine 100-Tree Decision Forest Ensemble trained on 10,000 fraud vectors with SHAP Feature Importance & Gemini 3.6 Flash Explanations.
+            </p>
+          </div>
+
+          {/* Model Spec Badge */}
+          {modelInfo && (
+            <div className="flex items-center gap-3 bg-[#1E293B] border border-[#334155] rounded-xl px-4 py-2 text-xs shrink-0">
+              <Database className="w-4 h-4 text-[#10B981]" />
+              <div>
+                <div className="font-bold text-white flex items-center gap-1.5">
+                  <span>{modelInfo.library} {modelInfo.modelType}</span>
+                  <span className="text-[10px] bg-[#38BDF8]/20 text-[#38BDF8] px-1.5 py-0.5 rounded font-mono">
+                    {modelInfo.n_estimators} Trees
+                  </span>
+                </div>
+                <div className="text-[11px] text-[#909097] font-mono">
+                  Accuracy: {(modelInfo.metrics.accuracy * 100).toFixed(1)}% | ROC-AUC: {modelInfo.metrics.rocAuc}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        <p className="text-sm text-[#c6c6cd] mt-1">
-          10-Tree Ensemble Decision Classifier with SHAP Feature Importance & Gemini AI Threat Analysis.
-        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Interactive Feature Control Sliders */}
         <div className="lg:col-span-5 bg-[#1E293B] border border-[#334155] rounded-xl p-5 space-y-4 shadow-lg">
           <div className="flex items-center justify-between border-b border-[#334155] pb-3">
-            <h2 className="text-xs font-bold text-[#38BDF8] uppercase tracking-wider">
-              Ensemble Input Feature Vector
+            <h2 className="text-xs font-bold text-[#38BDF8] uppercase tracking-wider flex items-center gap-1.5">
+              <GitBranch className="w-3.5 h-3.5" />
+              <span>Ensemble Input Vector</span>
             </h2>
             <button
               onClick={() =>
@@ -263,10 +317,18 @@ export const FraudDetectionView: React.FC<FraudDetectionViewProps> = ({
         <div className="lg:col-span-7 space-y-6">
           {/* Prediction Gauge Banner */}
           <div className="bg-[#1E293B] border border-[#334155] rounded-xl p-5 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="space-y-1 text-center md:text-left">
-              <span className="text-[10px] font-bold text-[#909097] uppercase tracking-wider">
-                Random Forest Decision Tree Ensemble Output
-              </span>
+            <div className="space-y-1.5 text-center md:text-left">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-[#909097] uppercase tracking-wider">
+                  Random Forest Ensemble Prediction
+                </span>
+                {prediction.engine && (
+                  <span className="text-[9px] bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/30 px-2 py-0.5 rounded-full font-mono">
+                    {prediction.engine}
+                  </span>
+                )}
+              </div>
+
               <div className="flex items-center gap-2">
                 <div
                   className={`text-4xl font-extrabold font-mono tracking-tight ${
@@ -280,6 +342,13 @@ export const FraudDetectionView: React.FC<FraudDetectionViewProps> = ({
                   {prediction.fraudProbability}% Fraud Probability
                 </div>
               </div>
+
+              {prediction.ensembleDetails && (
+                <div className="text-[11px] font-mono text-[#38BDF8] bg-[#0F172A] px-2.5 py-1 rounded inline-block border border-[#334155]">
+                  🌲 Tree Consensus: {prediction.ensembleDetails.fraudVotes} / {prediction.ensembleDetails.totalTrees} Trees voted Fraud ({prediction.ensembleDetails.voteConsensusPercent}% agreement)
+                </div>
+              )}
+
               <div className="text-xs text-[#c6c6cd]">
                 Category:{" "}
                 <span className="font-bold text-white">
