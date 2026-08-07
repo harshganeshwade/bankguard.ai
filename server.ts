@@ -94,28 +94,40 @@ async function startServer() {
     try {
       const { execFile } = await import("child_process");
       const payload = JSON.stringify(req.body);
+      const pythonCmd = process.platform === "win32" ? "python" : "python3";
       
-      execFile("python3", ["predict.py", payload], (error, stdout, stderr) => {
-        if (error) {
-          console.error("Python ML Exec Error:", stderr || error.message);
-          return res.status(500).json({
-            error: "Scikit-Learn Random Forest prediction execution failed",
-            details: stderr || error.message,
-          });
-        }
-        try {
-          const parsed = JSON.parse(stdout.trim());
-          return res.json({
-            success: true,
-            ...parsed,
-          });
-        } catch (pErr) {
-          return res.status(500).json({
-            error: "Failed to parse Python ML output",
-            raw: stdout,
-          });
-        }
-      });
+      const runPy = (cmd: string) => {
+        execFile(cmd, ["predict.py", payload], (error, stdout, stderr) => {
+          if (error && cmd === "python3" && process.platform === "win32") {
+            // Retry with python or py on Windows if python3 failed
+            return runPy("python");
+          }
+          if (error && cmd === "python" && process.platform !== "win32") {
+            return runPy("python3");
+          }
+          if (error) {
+            console.error("Python ML Exec Error:", stderr || error.message);
+            return res.status(500).json({
+              error: "Scikit-Learn Random Forest prediction execution failed",
+              details: stderr || error.message,
+            });
+          }
+          try {
+            const parsed = JSON.parse(stdout.trim());
+            return res.json({
+              success: true,
+              ...parsed,
+            });
+          } catch (pErr) {
+            return res.status(500).json({
+              error: "Failed to parse Python ML output",
+              raw: stdout,
+            });
+          }
+        });
+      };
+
+      runPy(pythonCmd);
     } catch (err: any) {
       return res.status(500).json({
         error: "Internal server error during ML prediction",
@@ -213,7 +225,7 @@ Generate a concise JSON response with:
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`BankGuard AI server running on http://0.0.0.0:${PORT}`);
+    console.log(`BankGuard AI server running on http://localhost:${PORT} (0.0.0.0:${PORT})`);
   });
 }
 
