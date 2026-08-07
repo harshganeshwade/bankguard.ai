@@ -287,6 +287,7 @@ export default function App() {
           activeTab={activeTab}
           onTabSelect={setActiveTab}
           currentRole={currentRole}
+          pendingTicketsCount={supportTickets.filter((t) => t.status === "Pending Admin Review").length}
         />
 
         {/* Content View Area */}
@@ -296,6 +297,7 @@ export default function App() {
               transactions={transactions}
               customers={customers}
               accounts={accounts}
+              tickets={supportTickets}
               onTabSelect={setActiveTab}
               onSync={handleSync}
               isSyncing={isSyncing}

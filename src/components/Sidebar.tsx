@@ -28,12 +28,14 @@ interface SidebarProps {
   activeTab: string;
   onTabSelect: (tab: string) => void;
   currentRole: UserRole;
+  pendingTicketsCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onTabSelect,
   currentRole,
+  pendingTicketsCount = 0,
 }) => {
   const navItems = [
     { id: "dash", label: "Dashboard", icon: LayoutDashboard },
@@ -119,6 +121,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <Icon className={`w-4 h-4 ${isActive ? "text-sky-400" : "text-slate-500"}`} />
                 <span className="truncate">{item.label}</span>
+                {item.id === "support" && pendingTicketsCount > 0 && (
+                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">
+                    {pendingTicketsCount}
+                  </span>
+                )}
               </button>
             );
           })}

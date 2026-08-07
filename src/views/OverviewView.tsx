@@ -15,6 +15,10 @@ import {
   ShieldAlert,
   Building2,
   IndianRupee,
+  LifeBuoy,
+  User,
+  MessageSquare,
+  FileText,
 } from "lucide-react";
 import {
   BarChart,
@@ -25,13 +29,14 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Transaction, Customer, BankAccount } from "../types";
+import { Transaction, Customer, BankAccount, SupportTicket } from "../types";
 import { exportToCsv } from "../utils/downloadReport";
 
 interface OverviewViewProps {
   transactions: Transaction[];
   customers: Customer[];
   accounts: BankAccount[];
+  tickets?: SupportTicket[];
   onTabSelect: (tab: string) => void;
   onSync: () => void;
   isSyncing: boolean;
@@ -41,11 +46,15 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   transactions,
   customers,
   accounts,
+  tickets = [],
   onTabSelect,
   onSync,
   isSyncing,
 }) => {
   const [velocityRange, setVelocityRange] = useState<"1H" | "24H" | "7D">("24H");
+
+  const pendingTickets = tickets.filter((t) => t.status === "Pending Admin Review");
+  const urgentTickets = tickets.filter((t) => t.priority === "Urgent" || t.priority === "High");
 
   // Sample Velocity chart data
   const velocityData = [
@@ -280,66 +289,167 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
       </div>
 
-      {/* Quick Action Hub & Live Threat Cases */}
+      {/* Quick Action Hub & Live Threat Cases & Employee Escalations */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Flagged Threat Cases */}
-        <div className="lg:col-span-8 bg-[#1E293B] border border-[#334155] rounded-xl overflow-hidden shadow-lg">
-          <div className="p-4 border-b border-[#334155] bg-[#0F172A] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-[#EF4444]" />
-              <h2 className="text-sm font-bold text-[#bec6e0] tracking-wide uppercase">
-                Active High-Risk Fraud Cases
-              </h2>
+        {/* Left Column: Flagged Threat Cases + Employee Escalations */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Active High-Risk Fraud Cases */}
+          <div className="bg-[#1E293B] border border-[#334155] rounded-xl overflow-hidden shadow-lg">
+            <div className="p-4 border-b border-[#334155] bg-[#0F172A] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-[#EF4444]" />
+                <h2 className="text-sm font-bold text-[#bec6e0] tracking-wide uppercase">
+                  Active High-Risk Fraud Cases
+                </h2>
+              </div>
+              <button
+                onClick={() => onTabSelect("investigate")}
+                className="text-xs text-[#38BDF8] hover:underline flex items-center gap-1 font-semibold"
+              >
+                <span>Investigation Panel</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button
-              onClick={() => onTabSelect("investigate")}
-              className="text-xs text-[#38BDF8] hover:underline flex items-center gap-1 font-semibold"
-            >
-              <span>Investigation Panel</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+
+            <div className="divide-y divide-[#334155]">
+              {transactions
+                .filter((t) => t.isFlagged)
+                .slice(0, 3)
+                .map((t) => (
+                  <div
+                    key={t.id}
+                    onClick={() => onTabSelect("investigate")}
+                    className="p-4 hover:bg-[#334155]/60 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-sm text-[#EF4444]">
+                          {t.txId}
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30">
+                          RISK {t.fraudProbability}%
+                        </span>
+                        <span className="text-xs text-[#909097] font-mono">
+                          {t.timestamp}
+                        </span>
+                      </div>
+                      <div className="text-xs text-[#d4e4fa] font-medium">
+                        {t.customerName} &rarr; {t.destination}
+                      </div>
+                      <div className="text-xs text-[#c6c6cd]">
+                        {t.primaryReason}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 self-end sm:self-center">
+                      <span className="font-mono text-sm font-bold text-[#EF4444]">
+                        ₹{t.amount.toLocaleString()}
+                      </span>
+                      <button className="px-3 py-1 bg-[#EF4444]/10 border border-[#EF4444] text-[#EF4444] rounded text-xs font-bold hover:bg-[#EF4444] hover:text-white transition-colors">
+                        REVIEW
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
 
-          <div className="divide-y divide-[#334155]">
-            {transactions
-              .filter((t) => t.isFlagged)
-              .slice(0, 4)
-              .map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => onTabSelect("investigate")}
-                  className="p-4 hover:bg-[#334155]/60 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-sm text-[#EF4444]">
-                        {t.txId}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30">
-                        RISK {t.fraudProbability}%
-                      </span>
-                      <span className="text-xs text-[#909097] font-mono">
-                        {t.timestamp}
-                      </span>
-                    </div>
-                    <div className="text-xs text-[#d4e4fa] font-medium">
-                      {t.customerName} &rarr; {t.destination}
-                    </div>
-                    <div className="text-xs text-[#c6c6cd]">
-                      {t.primaryReason}
-                    </div>
-                  </div>
+          {/* Employee Escalation Tickets Section */}
+          <div className="bg-[#1E293B] border border-[#334155] rounded-xl overflow-hidden shadow-lg">
+            <div className="p-4 border-b border-[#334155] bg-[#0F172A] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <LifeBuoy className="w-5 h-5 text-sky-400" />
+                <h2 className="text-sm font-bold text-[#bec6e0] tracking-wide uppercase">
+                  Employee Escalated Tickets & Help Desk
+                </h2>
+                {pendingTickets.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-mono font-bold">
+                    {pendingTickets.length} Pending Review
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => onTabSelect("support")}
+                className="text-xs text-[#38BDF8] hover:underline flex items-center gap-1 font-semibold"
+              >
+                <span>Admin Inbox ({tickets.length})</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
-                  <div className="flex items-center gap-3 self-end sm:self-center">
-                    <span className="font-mono text-sm font-bold text-[#EF4444]">
-                      ₹{t.amount.toLocaleString()}
-                    </span>
-                    <button className="px-3 py-1 bg-[#EF4444]/10 border border-[#EF4444] text-[#EF4444] rounded text-xs font-bold hover:bg-[#EF4444] hover:text-white transition-colors">
-                      REVIEW
-                    </button>
-                  </div>
+            <div className="divide-y divide-[#334155]">
+              {tickets.length === 0 ? (
+                <div className="p-6 text-center text-xs text-[#909097]">
+                  No escalated employee tickets logged yet.
                 </div>
-              ))}
+              ) : (
+                tickets.slice(0, 3).map((t) => (
+                  <div
+                    key={t.id}
+                    onClick={() => onTabSelect("support")}
+                    className="p-4 hover:bg-[#334155]/60 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-xs text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
+                          {t.ticketNumber}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            t.priority === "Urgent"
+                              ? "bg-red-500/10 text-red-400 border-red-500/30"
+                              : t.priority === "High"
+                              ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                              : "bg-slate-800 text-slate-300 border-slate-700"
+                          }`}
+                        >
+                          {t.priority}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            t.status === "Pending Admin Review"
+                              ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                              : t.status === "In Investigation"
+                              ? "bg-sky-500/10 text-sky-400 border-sky-500/20"
+                              : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          }`}
+                        >
+                          {t.status}
+                        </span>
+                        <span className="text-xs text-[#909097] font-mono ml-auto">
+                          {t.timestamp}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-slate-300 font-semibold">
+                        <User className="w-3.5 h-3.5 text-sky-400" />
+                        <span>{t.senderName} ({t.senderRole})</span>
+                        <span className="text-[#909097] font-normal">&bull; Category: {t.category}</span>
+                      </div>
+
+                      <div className="text-xs font-bold text-[#d4e4fa]">
+                        {t.subject}
+                      </div>
+                      <p className="text-xs text-[#c6c6cd] line-clamp-1">
+                        {t.message}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTabSelect("support");
+                        }}
+                        className="px-3 py-1.5 bg-sky-500/10 border border-sky-500/30 text-sky-400 hover:bg-sky-500 hover:text-slate-950 rounded text-xs font-bold transition-colors"
+                      >
+                        REVIEW & REPLY
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
@@ -350,6 +460,20 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               Quick Management Tools
             </h3>
             <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => onTabSelect("support")}
+                className="p-3 bg-[#0F172A] border border-[#334155] hover:border-[#38BDF8] rounded-lg text-left transition-all group col-span-2 bg-gradient-to-r from-sky-950/40 to-slate-900"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <LifeBuoy className="w-5 h-5 text-sky-400 group-hover:scale-110 transition-transform" />
+                  <span className="px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 font-mono font-bold text-[10px]">
+                    {pendingTickets.length} Pending
+                  </span>
+                </div>
+                <div className="text-xs font-bold text-[#d4e4fa]">Employee Escalations & Support</div>
+                <div className="text-[10px] text-[#909097]">Review Staff Help Desk Queries & Messaging Inbox</div>
+              </button>
+
               <button
                 onClick={() => onTabSelect("clients")}
                 className="p-3 bg-[#0F172A] border border-[#334155] hover:border-[#38BDF8] rounded-lg text-left transition-all group"
