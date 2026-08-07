@@ -1,0 +1,6 @@
+{
+  "name": "BankGuard AI",
+  "description": "Intelligent Banking Management & Fraud Detection Platform with Random Forest AI scoring, Explainable AI (SHAP), live attack simulation, customer & account management, loans, branch monitoring, ATMs, cards, RBAC, and audit trail.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
