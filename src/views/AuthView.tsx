@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Shield,
   Lock,
@@ -25,6 +25,8 @@ import {
   UserCheck,
 } from "lucide-react";
 import { UserRole } from "../types";
+import { googleSignIn, initAuth, getAccessToken, logoutGoogle, logAuditToFirestore } from "../lib/firebase";
+import { sendMfaEmailViaGmail } from "../lib/gmailService";
 
 interface AuthViewProps {
   onLoginSuccess: (session: {
@@ -131,6 +133,48 @@ export const AuthView: React.FC<AuthViewProps> = ({
   const [activeMfaCode, setActiveMfaCode] = useState<string>("849201");
   const [copiedNotification, setCopiedNotification] = useState(false);
 
+  // Google OAuth & Gmail API State
+  const [googleUser, setGoogleUser] = useState<any>(null);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
+  const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+  const [gmailStatusNotice, setGmailStatusNotice] = useState<string | null>(null);
+
+  // Initialize Firebase Auth listener
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleAccessToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleAccessToken(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleSigningIn(true);
+    setLoginError(null);
+    try {
+      const res = await googleSignIn();
+      if (res) {
+        setGoogleUser(res.user);
+        setGoogleAccessToken(res.accessToken);
+        setGmailStatusNotice(`Connected Gmail Account: ${res.user.email}`);
+        if (res.user.email) {
+          setLoginEmail(res.user.email);
+        }
+      }
+    } catch (err: any) {
+      console.error("Google Sign-In Error:", err);
+      setLoginError(err?.message || "Google Authentication failed.");
+    } finally {
+      setIsGoogleSigningIn(false);
+    }
+  };
+
   // Login form state
   const [loginEmail, setLoginEmail] = useState("vikramaditya.rao@bankguard.ai");
   const [loginPassword, setLoginPassword] = useState("AdminSecret@2026!");
@@ -181,7 +225,12 @@ export const AuthView: React.FC<AuthViewProps> = ({
   };
 
   // Dispatch MFA Code Email Service
-  const dispatchMfaEmail = (targetEmail: string, targetName: string, type: "MFA_LOGIN" | "WELCOME_REGISTER" | "RESET_OTP" = "MFA_LOGIN") => {
+  const dispatchMfaEmail = (
+    targetEmail: string,
+    targetName: string,
+    type: "MFA_LOGIN" | "WELCOME_REGISTER" | "RESET_OTP" = "MFA_LOGIN",
+    targetRole: UserRole = loginRole
+  ) => {
     const freshCode = generateRandomMfa();
     setActiveMfaCode(freshCode);
 
@@ -203,7 +252,35 @@ export const AuthView: React.FC<AuthViewProps> = ({
     };
 
     setEmailNotification(notif);
-    setMfaEmailSentNotice(`MFA Passcode sent to ${targetEmail}`);
+    setMfaEmailSentNotice(`MFA Passcode generated for ${targetEmail}`);
+
+    // Log event persistently to Google Cloud Firestore database
+    logAuditToFirestore({
+      username: targetName,
+      role: targetRole,
+      action: `MFA Token Dispatch (${type})`,
+      details: `Dispatched code to ${targetEmail}`,
+      riskTag: "ROUTINE",
+    });
+
+    // If Google OAuth Token is active, attempt REAL Gmail API dispatch!
+    if (googleAccessToken) {
+      sendMfaEmailViaGmail({
+        accessToken: googleAccessToken,
+        recipientEmail: targetEmail,
+        recipientName: targetName,
+        mfaCode: freshCode,
+        role: targetRole,
+        userType: "Staff",
+      }).then((res) => {
+        if (res.success) {
+          setGmailStatusNotice(`✅ Real Email Sent via Gmail API to ${targetEmail} (ID: ${res.messageId})`);
+        } else {
+          setGmailStatusNotice(`⚠️ Gmail API Dispatch Error: ${res.error || "Permission error"}`);
+        }
+      });
+    }
+
     setTimeout(() => setMfaEmailSentNotice(null), 5000);
     return freshCode;
   };
@@ -216,11 +293,11 @@ export const AuthView: React.FC<AuthViewProps> = ({
     setLoginError(null);
 
     // Dispatch email automatically
-    dispatchMfaEmail(usr.email, usr.name, "MFA_LOGIN");
+    dispatchMfaEmail(usr.email, usr.name, "MFA_LOGIN", usr.role);
   };
 
   // Trigger Send MFA Email Button
-  const handleTriggerMfaEmail = () => {
+  const handleTriggerMfaEmail = async () => {
     setLoginError(null);
     if (!validateEmail(loginEmail)) {
       setLoginError("Please enter a valid email address first.");
@@ -228,11 +305,30 @@ export const AuthView: React.FC<AuthViewProps> = ({
     }
 
     setIsSendingMfaEmail(true);
-    setTimeout(() => {
-      setIsSendingMfaEmail(false);
-      const name = loginEmail.split("@")[0].replace(".", " ");
-      dispatchMfaEmail(loginEmail, name, "MFA_LOGIN");
-    }, 600);
+
+    const name = loginEmail.split("@")[0].replace(".", " ");
+    const code = dispatchMfaEmail(loginEmail, name, "MFA_LOGIN", loginRole);
+
+    const token = googleAccessToken;
+    if (token) {
+      const res = await sendMfaEmailViaGmail({
+        accessToken: token,
+        recipientEmail: loginEmail,
+        recipientName: name,
+        mfaCode: code,
+        role: loginRole,
+        userType: "Staff",
+      });
+      if (res.success) {
+        setGmailStatusNotice(`✅ Real MFA Email dispatched via Gmail to ${loginEmail}`);
+      } else {
+        setGmailStatusNotice(`⚠️ Gmail API dispatch error: ${res.error}`);
+      }
+    } else {
+      setGmailStatusNotice(`💡 Tip: Click "Sign in with Google" below to send real MFA emails to your Gmail inbox.`);
+    }
+
+    setIsSendingMfaEmail(false);
   };
 
   // Auto-fill MFA code from simulated email card
@@ -774,6 +870,75 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   <span>{loginError}</span>
                 </div>
               )}
+
+              {/* GOOGLE OAUTH & GMAIL DISPATCH STATUS BAR */}
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-sky-500/30 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
+                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.3 7.31 24 12 24z" />
+                      <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z" />
+                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z" />
+                    </svg>
+                    <span className="font-bold text-slate-200">
+                      Gmail API MFA Dispatch Engine
+                    </span>
+                  </div>
+                  {googleAccessToken ? (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> OAuth Active
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">
+                      Offline Mode
+                    </span>
+                  )}
+                </div>
+
+                {googleUser ? (
+                  <div className="flex justify-between items-center text-[11px] bg-slate-900 p-2 rounded-lg border border-slate-800">
+                    <span className="text-slate-300 font-mono truncate">
+                      Connected: <strong>{googleUser.email}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logoutGoogle();
+                        setGmailStatusNotice("Signed out of Google OAuth.");
+                      }}
+                      className="text-xs text-red-400 hover:underline shrink-0 ml-2 font-bold"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-slate-400 leading-tight">
+                      Sign in with Google to enable <strong>direct Gmail API MFA dispatch</strong> for Admin, Manager, Auditor & Employees.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                      disabled={isGoogleSigningIn}
+                      className="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-bold transition-all shrink-0 flex items-center gap-1.5"
+                    >
+                      {isGoogleSigningIn ? (
+                        <span>Connecting...</span>
+                      ) : (
+                        <>Sign in with Google</>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {gmailStatusNotice && (
+                  <div className="text-[11px] font-mono text-sky-300 bg-sky-950/60 p-2 rounded-lg border border-sky-800/80 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>{gmailStatusNotice}</span>
+                  </div>
+                )}
+              </div>
 
               {mfaEmailSentNotice && (
                 <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs flex items-center justify-between">

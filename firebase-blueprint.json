@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "audit_logs": {
+      "title": "Audit Logs",
+      "description": "Security events, MFA dispatches, and authentication activity logs",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string" },
+        "actor": { "type": "string" },
+        "recipient": { "type": "string" },
+        "role": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "status": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action", "actor", "timestamp"]
+    },
+    "alerts": {
+      "title": "Security Alerts",
+      "description": "Security warnings, threat detections, and high-risk MFA triggers",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "severity": { "type": "string" },
+        "category": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "severity", "status", "createdAt"]
+    },
+    "sessions": {
+      "title": "Active Sessions",
+      "description": "User login sessions and multi-factor authentication tokens",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "mfaVerified": { "type": "boolean" },
+        "loginMethod": { "type": "string" },
+        "lastActive": { "type": "string" }
+      },
+      "required": ["email", "role", "mfaVerified"]
+    }
+  }
+}

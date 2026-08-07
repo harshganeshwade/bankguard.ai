@@ -232,7 +232,7 @@ export function generateSimulationAttack(vectorType: string): RandomForestFeatur
         velocityScore: 94,
         isNewDevice: true,
         loginDeviceChanged: true,
-        location: "London, UK",
+        location: "Srinagar, JK",
         ipAddress: "185.220.101.5",
         isVpnUsed: true,
       };
@@ -241,8 +241,8 @@ export function generateSimulationAttack(vectorType: string): RandomForestFeatur
       return {
         ...base,
         amount: 4500,
-        distanceKm: 8400,
-        location: "Moscow, RU",
+        distanceKm: 2400,
+        location: "Kolkata, WB",
         ipAddress: "192.168.1.105",
         isVpnUsed: true,
         isNewDevice: true,
@@ -284,7 +284,7 @@ export function generateSimulationAttack(vectorType: string): RandomForestFeatur
         isNewDevice: true,
         isVpnUsed: true,
         beneficiaryAgeDays: 0,
-        location: "Bucharest, RO",
+        location: "Guwahati, AS",
         ipAddress: "91.240.118.12",
       };
 
@@ -294,7 +294,7 @@ export function generateSimulationAttack(vectorType: string): RandomForestFeatur
         failedLoginAttempts: 8,
         loginDeviceChanged: true,
         isNewDevice: true,
-        location: "Sao Paulo, BR",
+        location: "Ahmedabad, GJ",
       };
 
     default:

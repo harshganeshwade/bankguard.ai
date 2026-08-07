@@ -46,6 +46,36 @@ async function startServer() {
     }
   });
 
+  // Gmail API Server Proxy endpoint for MFA email dispatching
+  app.post("/api/gmail/send-mfa", async (req, res) => {
+    try {
+      const { accessToken, recipientEmail, recipientName, mfaCode, role, userType } = req.body;
+      if (!accessToken || !recipientEmail || !mfaCode) {
+        return res.status(400).json({
+          error: "Missing required fields: accessToken, recipientEmail, and mfaCode are mandatory.",
+        });
+      }
+
+      const { sendMfaEmailViaGmail } = await import("./src/lib/gmailService");
+      const result = await sendMfaEmailViaGmail({
+        accessToken,
+        recipientEmail,
+        recipientName: recipientName || recipientEmail,
+        mfaCode,
+        role: role || "Employee",
+        userType: userType || "Staff",
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ success: false, error: result.error });
+      }
+
+      return res.json({ success: true, messageId: result.messageId });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || String(err) });
+    }
+  });
+
   // AI-powered Fraud Case Deep Analysis endpoint
   app.post("/api/ai-analyze-fraud", async (req, res) => {
     try {

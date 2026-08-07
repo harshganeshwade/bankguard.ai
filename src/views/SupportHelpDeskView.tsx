@@ -679,7 +679,7 @@ export const SupportHelpDeskView: React.FC<SupportHelpDeskViewProps> = ({
               <div className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden text-xs font-mono">
                 <div className="divide-y divide-slate-800/80">
                   {(auditLogs.length > 0 ? auditLogs : [
-                    { id: "L1", timestamp: "2026-08-06 23:28:10", action: "FAILED_MFA_BURST", user: "192.168.1.105 (Moscow)", details: "Argon2 hash mismatch on account ACC-3304" },
+                    { id: "L1", timestamp: "2026-08-06 23:28:10", action: "FAILED_MFA_BURST", user: "192.168.1.105 (Kolkata)", details: "Argon2 hash mismatch on account ACC-3304" },
                     { id: "L2", timestamp: "2026-08-06 23:25:04", action: "SAR_GENERATED", user: "Ananya Sharma (Analyst)", details: "FIU-IND compliant report for TX-9012" },
                     { id: "L3", timestamp: "2026-08-06 23:20:15", action: "ZKP_BIOMETRIC_FAIL", user: "Delhi Branch Node", details: "UIDAI biometric zero-knowledge proof rejected" },
                   ]).map((log, idx) => (

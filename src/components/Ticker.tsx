@@ -7,10 +7,10 @@ interface TickerProps {
 
 export const Ticker: React.FC<TickerProps> = ({ alerts }) => {
   const defaultAlerts = [
-    "ALERT: Multiple failed login attempts originating from IP 192.168.1.105 (Moscow, RU) targeting account #5512-9901-8811.",
+    "ALERT: Multiple failed login attempts originating from IP 192.168.1.105 (Kolkata, WB) targeting account #5512-9901-8811.",
     "ALERT: Suspicious wire transfer of ₹15,400 flagged for manual review on account #4592-0012-8921.",
     "ALERT: Velocity check failed for card ending in 4492 - 8 transactions in 45 seconds.",
-    "ALERT: Impossible travel detected - Login in Austin TX followed by transaction in Bucharest RO (4,200 km).",
+    "ALERT: Impossible travel detected - Login in Bengaluru, KA followed by transaction in Guwahati, AS (2,800 km).",
   ];
 
   const list = alerts.length > 0 ? alerts : defaultAlerts;

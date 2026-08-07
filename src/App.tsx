@@ -779,9 +779,9 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { name: "Simulate Russian IP Spurt", desc: "Generate 10 rapid transfers from Moscow VPN proxy", risk: "CRITICAL" },
+                  { name: "Simulate Foreign IP Spurt", desc: "Generate 10 rapid transfers from Kolkata VPN proxy", risk: "CRITICAL" },
                   { name: "Simulate Micro-Deposit Attack", desc: "Inject 100 ₹0.50 transactions across 5 accounts", risk: "HIGH" },
-                  { name: "Simulate ATM Card Cloning", desc: "Simulate simultaneous withdrawals in Mumbai and London", risk: "CRITICAL" },
+                  { name: "Simulate ATM Card Cloning", desc: "Simulate simultaneous withdrawals in Mumbai and Kolkata", risk: "CRITICAL" },
                 ].map((sim, i) => (
                   <div key={i} className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
                     <div className="flex justify-between items-center">
