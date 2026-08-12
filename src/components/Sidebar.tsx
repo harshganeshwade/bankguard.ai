@@ -35,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: "COMMAND",
       items: [
-        { id: "dash", label: "Command Center", icon: LayoutDashboard },
+        { id: "dash", label: "Dashboard", icon: LayoutDashboard },
       ],
     },
     {

@@ -20,6 +20,7 @@ import { CyberSecurityZkpView } from "./views/CyberSecurityZkpView";
 import { AttackLabView } from "./views/AttackLabView";
 import { SupportHelpDeskView } from "./views/SupportHelpDeskView";
 import { JwtTokenCountdown } from "./components/JwtTokenCountdown";
+import { LocationProximityMapCard } from "./components/LocationProximityMapCard";
 import {
   initialCustomers,
   initialAccounts,
@@ -93,7 +94,7 @@ export const ROLE_SESSION_PROFILES: Record<UserRole, RoleSessionProfile> = {
       },
       {
         location: "Bengaluru, KA, India",
-        ip: "106.51.72.18",
+        ip: "182.70.241.98",
         device: "Windows Edge 126",
         time: "Today, 08:15 AM",
         verification: "2FA Verified",
@@ -101,7 +102,7 @@ export const ROLE_SESSION_PROFILES: Record<UserRole, RoleSessionProfile> = {
       },
       {
         location: "New Delhi, DL, India",
-        ip: "115.240.90.5",
+        ip: "182.70.241.205",
         device: "iOS Mobile App 4.2",
         time: "Yesterday, 14:20 PM",
         verification: "Biometric Verified",
@@ -338,14 +339,15 @@ export default function App() {
   // Customer Handlers
   const handleAddCustomer = (newCust: Customer) => {
     setCustomers((prev) => [newCust, ...prev]);
+    const activeProfile = ROLE_SESSION_PROFILES[currentRole] || ROLE_SESSION_PROFILES.Admin;
     const audit: AuditLog = {
       id: `AUD-${Math.floor(100 + Math.random() * 900)}`,
       timestamp: new Date().toISOString().replace("T", " ").slice(0, 23),
       username: `${currentRole}_Operator`,
       role: currentRole,
-      ip: "192.168.1.45",
-      browser: "Chrome 122.0",
-      device: "Workstation",
+      ip: activeProfile.ip,
+      browser: activeProfile.device,
+      device: activeProfile.device,
       action: "Onboarded Customer",
       previousValue: "None",
       newValue: `Customer: ${newCust.name} (${newCust.id})`,
@@ -1042,6 +1044,12 @@ SUMMARY OF FLAGGED ACCOUNTS:
                       setIsAuthenticated(false);
                       setSessionExpiredNotice(null);
                     }}
+                  />
+
+                  {/* Geofence & Login Proximity Tactical Map Card */}
+                  <LocationProximityMapCard
+                    username={userSession.username}
+                    currentRole={currentRole}
                   />
 
                   {/* RBAC Role Matrix Table */}
