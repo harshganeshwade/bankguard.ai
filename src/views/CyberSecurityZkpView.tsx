@@ -38,7 +38,7 @@ export const CyberSecurityZkpView: React.FC = () => {
 
     if (lastKeyPressTime) {
       const flightTime = Math.round(now - lastKeyPressTime);
-      setTypingCadenceMs((prev) => [...prev.slice(-15), flightTime]);
+      setTypingCadenceMs((prev) => [...(prev || []).slice(-15), flightTime]);
     }
     setLastKeyPressTime(now);
   };
@@ -52,7 +52,7 @@ export const CyberSecurityZkpView: React.FC = () => {
     const interval = setInterval(() => {
       if (index < botString.length) {
         setTestInputText((prev) => prev + botString[index]);
-        setTypingCadenceMs((prev) => [...prev.slice(-15), 10]); // Fixed 10ms unnaturally robotic flight time
+        setTypingCadenceMs((prev) => [...(prev || []).slice(-15), 10]); // Fixed 10ms unnaturally robotic flight time
         index++;
       } else {
         clearInterval(interval);

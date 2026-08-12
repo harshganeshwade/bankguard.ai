@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
   Filter,
@@ -150,17 +151,23 @@ export const TransactionView: React.FC<TransactionViewProps> = ({
             </thead>
 
             <tbody className="divide-y divide-[#334155] text-xs">
-              {filtered.map((t) => {
-                const isHighRisk = t.riskScore >= 60;
-                const isMediumRisk = t.riskScore >= 25 && t.riskScore < 60;
+              <AnimatePresence mode="popLayout">
+                {filtered.map((t) => {
+                  const isHighRisk = t.riskScore >= 60;
+                  const isMediumRisk = t.riskScore >= 25 && t.riskScore < 60;
 
-                return (
-                  <tr
-                    key={t.id}
-                    className={`hover:bg-[#334155] transition-colors group ${
-                      isHighRisk ? "bg-red-950/20" : ""
-                    }`}
-                  >
+                  return (
+                    <motion.tr
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                      transition={{ duration: 0.22, ease: "easeOut" }}
+                      className={`hover:bg-[#334155] transition-colors group ${
+                        isHighRisk ? "bg-red-950/20" : ""
+                      }`}
+                    >
                     {/* Status Dot */}
                     <td className="p-4 text-center">
                       <div
@@ -187,7 +194,7 @@ export const TransactionView: React.FC<TransactionViewProps> = ({
                     {/* Origin / Dest */}
                     <td className="p-4">
                       <div className="text-[#d4e4fa] truncate max-w-[180px]">
-                        {t.customerName} ({t.accountNumber.slice(-4)})
+                        {t.customerName} ({(t.accountNumber || "").slice(-4)})
                       </div>
                       <div className="text-[#c6c6cd] text-[11px] truncate max-w-[180px] mt-0.5">
                         &rarr; {t.destination}
@@ -262,9 +269,10 @@ export const TransactionView: React.FC<TransactionViewProps> = ({
                         </button>
                       )}
                     </td>
-                  </tr>
-                );
-              })}
+                    </motion.tr>
+                  );
+                })}
+              </AnimatePresence>
             </tbody>
           </table>
         </div>

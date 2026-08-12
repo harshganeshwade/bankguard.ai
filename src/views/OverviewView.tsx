@@ -1,38 +1,31 @@
 import React, { useState } from "react";
 import {
-  Users,
-  CheckCircle2,
-  Ban,
-  Receipt,
-  Download,
-  RefreshCw,
+  ShieldCheck,
   TrendingUp,
+  TrendingDown,
   AlertTriangle,
   ArrowUpRight,
-  ArrowDownRight,
   Clock,
   ChevronRight,
-  ShieldAlert,
-  Building2,
-  IndianRupee,
-  LifeBuoy,
-  User,
-  MessageSquare,
-  FileText,
+  Download,
+  RefreshCw,
+  Activity,
+  Shield,
+  Search,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 import { Transaction, Customer, BankAccount, SupportTicket } from "../types";
+import { StatusBadge } from "../components/StatusBadge";
 import { exportToCsv } from "../utils/downloadReport";
 
-interface OverviewViewProps {
+interface CommandCenterProps {
   transactions: Transaction[];
   customers: Customer[];
   accounts: BankAccount[];
@@ -40,9 +33,10 @@ interface OverviewViewProps {
   onTabSelect: (tab: string) => void;
   onSync: () => void;
   isSyncing: boolean;
+  onInspectTx?: (tx: Transaction) => void;
 }
 
-export const OverviewView: React.FC<OverviewViewProps> = ({
+export const OverviewView: React.FC<CommandCenterProps> = ({
   transactions,
   customers,
   accounts,
@@ -50,467 +44,281 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onTabSelect,
   onSync,
   isSyncing,
+  onInspectTx,
 }) => {
-  const [velocityRange, setVelocityRange] = useState<"1H" | "24H" | "7D">("24H");
-
-  const pendingTickets = tickets.filter((t) => t.status === "Pending Admin Review");
-  const urgentTickets = tickets.filter((t) => t.priority === "Urgent" || t.priority === "High");
-
-  // Sample Velocity chart data
-  const velocityData = [
-    { time: "08:00", count: 4000, isSpike: false },
-    { time: "10:00", count: 6200, isSpike: false },
-    { time: "12:00", count: 3100, isSpike: false },
-    { time: "14:00", count: 7500, isSpike: false },
-    { time: "16:00", count: 9500, isSpike: true }, // Anomaly spike
-    { time: "18:00", count: 5200, isSpike: false },
-    { time: "20:00", count: 7100, isSpike: false },
-    { time: "22:00", count: 4800, isSpike: false },
+  const activityData = [
+    { time: "00:00", volume: 1.2, txCount: 1200, riskScore: 12 },
+    { time: "04:00", volume: 0.8, txCount: 850, riskScore: 15 },
+    { time: "08:00", volume: 3.4, txCount: 3400, riskScore: 22 },
+    { time: "12:00", volume: 6.8, txCount: 5200, riskScore: 18 },
+    { time: "16:00", volume: 8.2, txCount: 6100, riskScore: 42 },
+    { time: "20:00", volume: 4.4, txCount: 1679, riskScore: 20 },
   ];
 
-  const blockedCount = accounts.filter((a) => a.status === "Blocked" || a.status === "Frozen").length + 138;
-  const activeCount = accounts.filter((a) => a.status === "Active").length + 22100;
-  const totalCustomers = customers.length + 24587;
+  const recentEvents = [
+    {
+      id: "EVT-101",
+      label: "High-risk transaction detected",
+      time: "2 min",
+      type: "critical",
+      tx: transactions[0],
+    },
+    {
+      id: "EVT-102",
+      label: "Login anomaly detected (Kolkata Proxy)",
+      time: "8 min",
+      type: "warning",
+      tx: transactions[1],
+    },
+    {
+      id: "EVT-103",
+      label: "Account •••• 4921 temporarily blocked",
+      time: "14 min",
+      type: "critical",
+      tx: transactions[2],
+    },
+    {
+      id: "EVT-104",
+      label: "Attack simulation completed (100% blocked)",
+      time: "21 min",
+      type: "normal",
+      tx: transactions[3],
+    },
+  ];
+
+  const currentDate = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-8 max-w-7xl mx-auto font-sans text-slate-100">
+      {/* Top Header & System Health Bar */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white font-sans">
+              Good evening, Harsh
+            </h1>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Security operations overview
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() =>
+                exportToCsv(
+                  `BankGuard_Security_Operations_${new Date().toISOString().split("T")[0]}.csv`,
+                  transactions.map((tx) => ({
+                    TxID: tx.txId,
+                    Customer: tx.customerName,
+                    Amount: tx.amount,
+                    RiskScore: tx.riskScore,
+                    Status: tx.status,
+                    Timestamp: tx.timestamp,
+                  }))
+                )
+              }
+              className="px-3 py-1.5 rounded-lg bg-[#0F141D] border border-[#202938] text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <span>Export</span>
+            </button>
+            <button
+              onClick={onSync}
+              disabled={isSyncing}
+              className="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              <span>Sync</span>
+            </button>
+          </div>
+        </div>
+
+        {/* System Operational Status Row */}
+        <div className="flex items-center justify-between py-2 border-y border-[#202938] text-xs font-mono">
+          <div className="flex items-center gap-2 text-emerald-400 font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>SYSTEM HEALTHY</span>
+          </div>
+          <span className="text-slate-500">{currentDate}</span>
+        </div>
+      </div>
+
+      {/* Primary Metrics (Non-card layout) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2 border-b border-[#202938]">
         <div>
-          <h1 className="text-3xl font-bold text-[#bec6e0] font-headline-md">
-            Overview
-          </h1>
-          <p className="text-sm text-[#c6c6cd] mt-1">
-            Real-time system monitoring, AI threat analysis, and operational banking metrics.
-          </p>
+          <div className="text-2xl font-mono font-bold text-white tracking-tight">
+            ₹ 24.8M
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-sans">
+            Transaction Volume
+          </div>
+          <div className="text-[11px] text-rose-400 font-mono mt-1 flex items-center gap-1">
+            <TrendingDown className="w-3 h-3" />
+            <span>↓ 3.2% vs yesterday</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() =>
-              exportToCsv(
-                `BankGuard_Overview_Metrics_${new Date().toISOString().split("T")[0]}.csv`,
-                transactions.map((tx) => ({
-                  TransactionID: tx.id,
-                  Customer: tx.customerName,
-                  Account: tx.accountNumber,
-                  Amount: `INR ${tx.amount}`,
-                  RiskScore: tx.riskScore,
-                  Status: tx.status,
-                  Timestamp: tx.timestamp,
-                }))
-              )
-            }
-            className="bg-[#1E293B] border border-[#334155] text-[#d4e4fa] text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#334155] transition-colors"
-          >
-            <Download className="w-4 h-4 text-[#38BDF8]" />
-            <span>Export Report</span>
-          </button>
+        <div>
+          <div className="text-2xl font-mono font-bold text-white tracking-tight">
+            18,429
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-sans">
+            Transactions
+          </div>
+          <div className="text-[11px] text-emerald-400 font-mono mt-1 flex items-center gap-1">
+            <TrendingUp className="w-3 h-3" />
+            <span>↑ 8.4% vs yesterday</span>
+          </div>
+        </div>
 
-          <button
-            onClick={onSync}
-            disabled={isSyncing}
-            className="bg-[#38BDF8] text-[#051424] text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
-            <span>Sync Now</span>
-          </button>
+        <div>
+          <div className="text-2xl font-mono font-bold text-white tracking-tight">
+            27
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-sans">
+            Alerts
+          </div>
+          <div className="text-[11px] text-amber-400 font-mono mt-1 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            <span>↑ 2 unresolved</span>
+          </div>
         </div>
       </div>
 
-      {/* Bento Grid KPI Section */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-        {/* KPI 1: Total Customers */}
-        <div className="md:col-span-4 bg-[#1E293B] border border-[#334155] rounded-xl p-5 flex flex-col justify-between hover:border-[#38BDF8]/50 transition-colors">
-          <div className="flex justify-between items-start mb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#909097]">
-              Total Customers
-            </span>
-            <div className="p-2 bg-[#0F172A] rounded-lg text-[#38BDF8]">
-              <Users className="w-5 h-5" />
-            </div>
-          </div>
-          <div>
-            <div className="text-4xl font-extrabold text-[#bec6e0] tracking-tight">
-              {totalCustomers.toLocaleString()}
-            </div>
-            <div className="text-xs text-[#10B981] font-semibold flex items-center gap-1 mt-2">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>+1.2% from last week</span>
-            </div>
-          </div>
+      {/* Security Status Section */}
+      <div className="space-y-3">
+        <div className="text-xs font-mono text-slate-400 uppercase tracking-wider font-semibold">
+          SECURITY STATUS
         </div>
-
-        {/* KPI 2: Active Accounts */}
-        <div className="md:col-span-4 bg-[#1E293B] border border-[#334155] rounded-xl p-5 flex flex-col justify-between hover:border-[#38BDF8]/50 transition-colors">
-          <div className="flex justify-between items-start mb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#909097]">
-              Active Accounts
-            </span>
-            <div className="p-2 bg-[#0F172A] rounded-lg text-[#10B981]">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-          </div>
-          <div>
-            <div className="text-4xl font-extrabold text-[#bec6e0] tracking-tight">
-              {activeCount.toLocaleString()}
-            </div>
-            <div className="text-xs text-[#c6c6cd] flex items-center gap-1 mt-2">
-              <span>89.8% customer engagement rate</span>
-            </div>
-          </div>
-        </div>
-
-        {/* KPI 3: Blocked / Flagged Accounts */}
-        <div className="md:col-span-4 bg-[#1E293B] border border-[#EF4444]/40 rounded-xl p-5 flex flex-col justify-between relative overflow-hidden group">
-          <div className="absolute inset-0 bg-[#EF4444]/5 pointer-events-none"></div>
-          <div className="flex justify-between items-start mb-4 relative z-10">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#c6c6cd]">
-              Blocked / Flagged Accounts
-            </span>
-            <div className="p-2 bg-[#EF4444]/10 rounded-lg text-[#EF4444]">
-              <Ban className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="relative z-10">
-            <div className="text-4xl font-extrabold text-[#EF4444] tracking-tight">
-              {blockedCount}
-            </div>
-            <div className="text-xs text-[#EF4444] font-semibold flex items-center gap-1 mt-2">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>+12 flagged by AI today</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Chart Card: Transaction Velocity */}
-        <div className="md:col-span-8 bg-[#1E293B] border border-[#334155] rounded-xl p-5 flex flex-col min-h-[320px]">
-          <div className="flex justify-between items-center mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          <div className="p-4 rounded-xl bg-[#0F141D] border border-[#202938] flex items-center justify-between">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#909097]">
-                Transaction Velocity
-              </h3>
-              <p className="text-xs text-[#c6c6cd] mt-0.5">
-                Real-time volume analysis & anomaly spike detection
-              </p>
+              <div className="text-xs text-slate-400 font-medium">Fraud Risk</div>
+              <div className="text-xl font-mono font-bold text-emerald-400 mt-1">
+                LOW
+              </div>
+              <div className="text-[11px] font-mono text-slate-500">18 / 100</div>
             </div>
-            <div className="flex gap-1.5 bg-[#0F172A] p-1 rounded-lg border border-[#334155]">
-              {(["1H", "24H", "7D"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setVelocityRange(r)}
-                  className={`text-xs px-2.5 py-1 rounded font-semibold transition-colors ${
-                    velocityRange === r
-                      ? "bg-[#38BDF8] text-[#051424]"
-                      : "text-[#c6c6cd] hover:text-white"
+            <StatusBadge status="ACTIVE" />
+          </div>
+
+          <div className="p-4 rounded-xl bg-[#0F141D] border border-[#202938] flex items-center justify-between">
+            <div>
+              <div className="text-xs text-slate-400 font-medium">System Health</div>
+              <div className="text-xl font-mono font-bold text-emerald-400 mt-1">
+                HEALTHY
+              </div>
+              <div className="text-[11px] font-mono text-slate-500">99.98%</div>
+            </div>
+            <StatusBadge status="HEALTHY" />
+          </div>
+
+          <div className="p-4 rounded-xl bg-[#0F141D] border border-[#202938] flex items-center justify-between">
+            <div>
+              <div className="text-xs text-slate-400 font-medium">Attack Defense</div>
+              <div className="text-xl font-mono font-bold text-sky-400 mt-1">
+                ACTIVE
+              </div>
+              <div className="text-[11px] font-mono text-slate-500">100%</div>
+            </div>
+            <StatusBadge status="ACTIVE" />
+          </div>
+        </div>
+      </div>
+
+      {/* Transaction Activity Graph */}
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <div className="text-xs font-mono text-slate-400 uppercase tracking-wider font-semibold">
+            TRANSACTION ACTIVITY
+          </div>
+          <span className="text-[11px] text-slate-500 font-mono">24H Volume Curve</span>
+        </div>
+
+        <div className="p-4 rounded-xl bg-[#0F141D] border border-[#202938] h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={activityData}>
+              <defs>
+                <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#38BDF8" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#38BDF8" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="time" stroke="#64748B" fontSize={11} tickLine={false} />
+              <YAxis stroke="#64748B" fontSize={11} tickLine={false} unit="M" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#0F141D",
+                  borderColor: "#202938",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="volume"
+                stroke="#38BDF8"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorVol)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Recent Security Events */}
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <div className="text-xs font-mono text-slate-400 uppercase tracking-wider font-semibold">
+            RECENT SECURITY EVENTS
+          </div>
+          <button
+            onClick={() => onTabSelect("fraud")}
+            className="text-xs text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1"
+          >
+            <span>Fraud Operations</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="p-4 rounded-xl bg-[#0F141D] border border-[#202938] divide-y divide-[#202938]">
+          {recentEvents.map((evt) => (
+            <div
+              key={evt.id}
+              onClick={() => {
+                if (onInspectTx && evt.tx) {
+                  onInspectTx(evt.tx);
+                } else {
+                  onTabSelect("fraud");
+                }
+              }}
+              className="py-3 flex items-center justify-between hover:bg-[#151B26] px-2 rounded-lg cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    evt.type === "critical"
+                      ? "bg-rose-500"
+                      : evt.type === "warning"
+                      ? "bg-amber-400"
+                      : "bg-emerald-400"
                   }`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex-1 w-full min-h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={velocityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="time" stroke="#64748B" fontSize={11} tickLine={false} />
-                <YAxis stroke="#64748B" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#0F172A",
-                    borderColor: "#334155",
-                    borderRadius: "8px",
-                    color: "#fff",
-                    fontSize: "12px",
-                  }}
                 />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {velocityData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.isSpike ? "#EF4444" : "#38BDF8"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* KPI Card 4: Today's Transactions Volume */}
-        <div className="md:col-span-4 bg-[#1E293B] border border-[#334155] rounded-xl p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-start mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#909097]">
-                Today's Transactions
-              </span>
-              <div className="p-2 bg-[#0F172A] rounded-lg text-[#38BDF8]">
-                <Receipt className="w-5 h-5" />
+                <span className="text-xs text-slate-200 font-medium">
+                  {evt.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-xs text-slate-500">
+                <span>{evt.time}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
               </div>
             </div>
-            <div className="text-4xl font-extrabold text-[#bec6e0] tracking-tight">
-              ₹4.25Cr
-            </div>
-            <div className="text-xs text-[#c6c6cd] mt-1">Processed Volume (24h)</div>
-          </div>
-
-          <div className="space-y-3 mt-6">
-            <div>
-              <div className="flex justify-between text-xs mb-1 font-medium">
-                <span className="text-[#c6c6cd]">Cleared</span>
-                <span className="text-[#10B981] font-mono font-bold">92%</span>
-              </div>
-              <div className="w-full bg-[#0F172A] h-2 rounded-full overflow-hidden">
-                <div className="bg-[#10B981] h-full w-[92%]"></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs mb-1 font-medium">
-                <span className="text-[#c6c6cd]">Pending Review</span>
-                <span className="text-[#F59E0B] font-mono font-bold">6%</span>
-              </div>
-              <div className="w-full bg-[#0F172A] h-2 rounded-full overflow-hidden">
-                <div className="bg-[#F59E0B] h-full w-[6%]"></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs mb-1 font-medium">
-                <span className="text-[#c6c6cd]">Rejected / Held</span>
-                <span className="text-[#EF4444] font-mono font-bold">2%</span>
-              </div>
-              <div className="w-full bg-[#0F172A] h-2 rounded-full overflow-hidden">
-                <div className="bg-[#EF4444] h-full w-[2%]"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Action Hub & Live Threat Cases & Employee Escalations */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Flagged Threat Cases + Employee Escalations */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Active High-Risk Fraud Cases */}
-          <div className="bg-[#1E293B] border border-[#334155] rounded-xl overflow-hidden shadow-lg">
-            <div className="p-4 border-b border-[#334155] bg-[#0F172A] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-[#EF4444]" />
-                <h2 className="text-sm font-bold text-[#bec6e0] tracking-wide uppercase">
-                  Active High-Risk Fraud Cases
-                </h2>
-              </div>
-              <button
-                onClick={() => onTabSelect("investigate")}
-                className="text-xs text-[#38BDF8] hover:underline flex items-center gap-1 font-semibold"
-              >
-                <span>Investigation Panel</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="divide-y divide-[#334155]">
-              {transactions
-                .filter((t) => t.isFlagged)
-                .slice(0, 3)
-                .map((t) => (
-                  <div
-                    key={t.id}
-                    onClick={() => onTabSelect("investigate")}
-                    className="p-4 hover:bg-[#334155]/60 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-sm text-[#EF4444]">
-                          {t.txId}
-                        </span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30">
-                          RISK {t.fraudProbability}%
-                        </span>
-                        <span className="text-xs text-[#909097] font-mono">
-                          {t.timestamp}
-                        </span>
-                      </div>
-                      <div className="text-xs text-[#d4e4fa] font-medium">
-                        {t.customerName} &rarr; {t.destination}
-                      </div>
-                      <div className="text-xs text-[#c6c6cd]">
-                        {t.primaryReason}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 self-end sm:self-center">
-                      <span className="font-mono text-sm font-bold text-[#EF4444]">
-                        ₹{t.amount.toLocaleString()}
-                      </span>
-                      <button className="px-3 py-1 bg-[#EF4444]/10 border border-[#EF4444] text-[#EF4444] rounded text-xs font-bold hover:bg-[#EF4444] hover:text-white transition-colors">
-                        REVIEW
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          {/* Employee Escalation Tickets Section */}
-          <div className="bg-[#1E293B] border border-[#334155] rounded-xl overflow-hidden shadow-lg">
-            <div className="p-4 border-b border-[#334155] bg-[#0F172A] flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <LifeBuoy className="w-5 h-5 text-sky-400" />
-                <h2 className="text-sm font-bold text-[#bec6e0] tracking-wide uppercase">
-                  Employee Escalated Tickets & Help Desk
-                </h2>
-                {pendingTickets.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-mono font-bold">
-                    {pendingTickets.length} Pending Review
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => onTabSelect("support")}
-                className="text-xs text-[#38BDF8] hover:underline flex items-center gap-1 font-semibold"
-              >
-                <span>Admin Inbox ({tickets.length})</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="divide-y divide-[#334155]">
-              {tickets.length === 0 ? (
-                <div className="p-6 text-center text-xs text-[#909097]">
-                  No escalated employee tickets logged yet.
-                </div>
-              ) : (
-                tickets.slice(0, 3).map((t) => (
-                  <div
-                    key={t.id}
-                    onClick={() => onTabSelect("support")}
-                    className="p-4 hover:bg-[#334155]/60 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-bold text-xs text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
-                          {t.ticketNumber}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                            t.priority === "Urgent"
-                              ? "bg-red-500/10 text-red-400 border-red-500/30"
-                              : t.priority === "High"
-                              ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                              : "bg-slate-800 text-slate-300 border-slate-700"
-                          }`}
-                        >
-                          {t.priority}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                            t.status === "Pending Admin Review"
-                              ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                              : t.status === "In Investigation"
-                              ? "bg-sky-500/10 text-sky-400 border-sky-500/20"
-                              : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          }`}
-                        >
-                          {t.status}
-                        </span>
-                        <span className="text-xs text-[#909097] font-mono ml-auto">
-                          {t.timestamp}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-slate-300 font-semibold">
-                        <User className="w-3.5 h-3.5 text-sky-400" />
-                        <span>{t.senderName} ({t.senderRole})</span>
-                        <span className="text-[#909097] font-normal">&bull; Category: {t.category}</span>
-                      </div>
-
-                      <div className="text-xs font-bold text-[#d4e4fa]">
-                        {t.subject}
-                      </div>
-                      <p className="text-xs text-[#c6c6cd] line-clamp-1">
-                        {t.message}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTabSelect("support");
-                        }}
-                        className="px-3 py-1.5 bg-sky-500/10 border border-sky-500/30 text-sky-400 hover:bg-sky-500 hover:text-slate-950 rounded text-xs font-bold transition-colors"
-                      >
-                        REVIEW & REPLY
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Quick Operational Modules */}
-        <div className="lg:col-span-4 space-y-4">
-          <div className="bg-[#1E293B] border border-[#334155] rounded-xl p-5">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#909097] mb-4">
-              Quick Management Tools
-            </h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                onClick={() => onTabSelect("support")}
-                className="p-3 bg-[#0F172A] border border-[#334155] hover:border-[#38BDF8] rounded-lg text-left transition-all group col-span-2 bg-gradient-to-r from-sky-950/40 to-slate-900"
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <LifeBuoy className="w-5 h-5 text-sky-400 group-hover:scale-110 transition-transform" />
-                  <span className="px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 font-mono font-bold text-[10px]">
-                    {pendingTickets.length} Pending
-                  </span>
-                </div>
-                <div className="text-xs font-bold text-[#d4e4fa]">Employee Escalations & Support</div>
-                <div className="text-[10px] text-[#909097]">Review Staff Help Desk Queries & Messaging Inbox</div>
-              </button>
-
-              <button
-                onClick={() => onTabSelect("clients")}
-                className="p-3 bg-[#0F172A] border border-[#334155] hover:border-[#38BDF8] rounded-lg text-left transition-all group"
-              >
-                <Users className="w-5 h-5 text-[#38BDF8] mb-1.5 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-[#d4e4fa]">Add Client</div>
-                <div className="text-[10px] text-[#909097]">New KYC Onboarding</div>
-              </button>
-
-              <button
-                onClick={() => onTabSelect("accounts")}
-                className="p-3 bg-[#0F172A] border border-[#334155] hover:border-[#38BDF8] rounded-lg text-left transition-all group"
-              >
-                <Building2 className="w-5 h-5 text-[#10B981] mb-1.5 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-[#d4e4fa]">New Account</div>
-                <div className="text-[10px] text-[#909097]">Savings / Current</div>
-              </button>
-
-              <button
-                onClick={() => onTabSelect("loans")}
-                className="p-3 bg-[#0F172A] border border-[#334155] hover:border-[#38BDF8] rounded-lg text-left transition-all group"
-              >
-                <IndianRupee className="w-5 h-5 text-[#F59E0B] mb-1.5 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-[#d4e4fa]">Loan Portal</div>
-                <div className="text-[10px] text-[#909097]">EMI & Risk Scoring</div>
-              </button>
-
-              <button
-                onClick={() => onTabSelect("labs")}
-                className="p-3 bg-[#0F172A] border border-[#334155] hover:border-[#38BDF8] rounded-lg text-left transition-all group"
-              >
-                <ShieldAlert className="w-5 h-5 text-[#EF4444] mb-1.5 group-hover:scale-110 transition-transform" />
-                <div className="text-xs font-bold text-[#d4e4fa]">Attack Sandbox</div>
-                <div className="text-[10px] text-[#909097]">Live Simulation</div>
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>

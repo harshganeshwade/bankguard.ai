@@ -6,7 +6,6 @@ import {
   User,
   Mail,
   Phone,
-  QrCode,
   CheckCircle2,
   Zap,
   ArrowRight,
@@ -14,6 +13,7 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  AlertTriangle,
   Key,
   X,
   Send,
@@ -21,8 +21,12 @@ import {
   Copy,
   Check,
   Sparkles,
-  Building2,
   UserCheck,
+  Filter,
+  Fingerprint,
+  ChevronRight,
+  Globe,
+  RefreshCw,
 } from "lucide-react";
 import { UserRole } from "../types";
 import { googleSignIn, initAuth, getAccessToken, logoutGoogle, logAuditToFirestore } from "../lib/firebase";
@@ -36,6 +40,7 @@ interface AuthViewProps {
     token: string;
   }) => void;
   onOpenSecuritySpec: () => void;
+  sessionExpiredNotice?: string | null;
 }
 
 // Roster definition
@@ -120,10 +125,12 @@ interface EmailDispatchNotification {
 export const AuthView: React.FC<AuthViewProps> = ({
   onLoginSuccess,
   onOpenSecuritySpec,
+  sessionExpiredNotice,
 }) => {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [rosterFilter, setRosterFilter] = useState<"All" | "Staff" | "Customer">("All");
 
   // User Roster State
   const [userRoster, setUserRoster] = useState<RegisteredUser[]>(DEFAULT_USER_ROSTER);
@@ -252,7 +259,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
     };
 
     setEmailNotification(notif);
-    setMfaEmailSentNotice(`MFA Passcode generated for ${targetEmail}`);
+    setMfaEmailSentNotice(`MFA Passcode dispatched to ${targetEmail}`);
 
     // Log event persistently to Google Cloud Firestore database
     logAuditToFirestore({
@@ -428,7 +435,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
     setIsRegistering(true);
     setTimeout(() => {
       setIsRegistering(false);
-      
+
       // Add newly registered user to active roster
       const newUser: RegisteredUser = {
         name: regUsername,
@@ -494,40 +501,47 @@ export const AuthView: React.FC<AuthViewProps> = ({
 
   const pwdStrength = getPasswordStrength(regPassword);
 
-  return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-4 md:p-8 relative overflow-hidden font-sans select-none">
-      {/* Background Glow Accents */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+  const filteredRoster = userRoster.filter((u) => {
+    if (rosterFilter === "Staff") return u.userType === "Staff";
+    if (rosterFilter === "Customer") return u.userType === "Customer";
+    return true;
+  });
 
-      {/* SIMULATED EMAIL NOTIFICATION DISPATCHER TOAST / MODAL */}
+  return (
+    <div className="min-h-screen w-full bg-[#080E1A] text-slate-100 flex flex-col justify-between p-4 md:p-8 relative overflow-x-hidden font-sans select-none">
+      {/* Background Subtle Mesh / Glowing Orbs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-sky-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-[40%] right-[30%] w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* SIMULATED EMAIL NOTIFICATION DISPATCHER TOAST */}
       {emailNotification && (
-        <div className="fixed bottom-4 right-4 z-50 max-w-md w-full bg-slate-900 border-2 border-sky-500/50 rounded-2xl shadow-2xl p-4 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="flex justify-between items-start border-b border-slate-800 pb-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-sky-500/20 text-sky-400">
-                <Inbox className="w-4 h-4" />
-              </span>
+        <div className="fixed bottom-6 right-6 z-50 max-w-md w-full bg-[#0F172A]/95 border border-sky-500/40 rounded-2xl shadow-2xl p-4 backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex justify-between items-start border-b border-slate-800 pb-2.5 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                <Inbox className="w-4 h-4 animate-pulse" />
+              </div>
               <div>
                 <span className="text-[10px] uppercase font-mono font-bold text-sky-400 tracking-wider block">
-                  BankGuard Dispatcher Email Service
+                  BankGuard Dispatcher Service
                 </span>
-                <h4 className="text-xs font-bold text-slate-100">Inbox Notification Received</h4>
+                <h4 className="text-xs font-bold text-slate-100">Live MFA Email Notification</h4>
               </div>
             </div>
             <button
               onClick={() => setEmailNotification(null)}
-              className="text-slate-400 hover:text-white p-1 rounded"
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="space-y-2 text-xs">
-            <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1 font-mono text-[11px]">
+          <div className="space-y-2.5 text-xs">
+            <div className="bg-[#080E1A] p-2.5 rounded-xl border border-slate-800/80 space-y-1 font-mono text-[11px]">
               <div className="flex justify-between text-slate-400">
                 <span>From:</span>
-                <span className="text-slate-200 font-bold">auth-service@security.bankguard.ai</span>
+                <span className="text-slate-200 font-semibold">auth-service@security.bankguard.ai</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>To:</span>
@@ -539,36 +553,38 @@ export const AuthView: React.FC<AuthViewProps> = ({
               </div>
             </div>
 
-            <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+            <div className="p-3 bg-[#080E1A]/80 rounded-xl border border-slate-800 space-y-2">
               <div className="font-bold text-slate-100 text-xs flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                {emailNotification.subject}
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>{emailNotification.subject}</span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                Dear <strong className="text-slate-100">{emailNotification.toName}</strong>, your single-use 6-digit MFA authentication passcode is:
+                Dear <strong className="text-slate-100">{emailNotification.toName}</strong>, your single-use 6-digit MFA passcode is:
               </p>
-              
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-sky-500/30">
-                <span className="text-xl font-mono font-extrabold tracking-widest text-sky-400">
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0F172A] border border-sky-500/40">
+                <span className="text-2xl font-mono font-black tracking-widest text-sky-400">
                   {emailNotification.mfaCode}
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">Expires in 5m</span>
+                <span className="text-[10px] text-slate-400 font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
+                  Valid 5m
+                </span>
               </div>
             </div>
 
             <div className="flex gap-2 pt-1">
               <button
                 onClick={handleAutoFillMfa}
-                className="flex-1 py-2 px-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                className="flex-1 py-2.5 px-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-sky-500/20"
               >
                 {copiedNotification ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-slate-950" />
+                    <Check className="w-4 h-4 text-slate-950" />
                     Auto-Filled Code!
                   </>
                 ) : (
                   <>
-                    <Zap className="w-3.5 h-3.5" />
+                    <Zap className="w-4 h-4" />
                     Auto-Fill MFA Code
                   </>
                 )}
@@ -579,7 +595,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   setCopiedNotification(true);
                   setTimeout(() => setCopiedNotification(false), 2000);
                 }}
-                className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-xl flex items-center gap-1 transition-colors"
+                className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs rounded-xl flex items-center gap-1.5 border border-slate-700 transition-colors"
               >
                 <Copy className="w-3.5 h-3.5" />
                 Copy
@@ -589,131 +605,196 @@ export const AuthView: React.FC<AuthViewProps> = ({
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="flex justify-between items-center max-w-6xl mx-auto w-full z-10 py-2">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+      {/* TOP NAVBAR */}
+      <header className="flex justify-between items-center max-w-6xl mx-auto w-full z-10 py-3 border-b border-slate-800/60 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-sky-400 border border-sky-500/30 shadow-lg shadow-sky-500/10">
             <Shield className="w-6 h-6" />
           </div>
           <div>
-            <span className="font-bold text-xl tracking-tight text-slate-100">
-              BankGuard<span className="text-sky-400">.ai</span>
-            </span>
-            <span className="text-[10px] text-slate-500 block font-mono">
-              TLS 1.3 • Argon2id • Email 2FA MFA Service
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-xl tracking-tight text-white">
+                BankGuard<span className="text-sky-400">.ai</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/20 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                Zero-Trust Active
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-400 block font-mono">
+              Argon2id Salted Hash • Email 2FA MFA • TLS 1.3
             </span>
           </div>
         </div>
 
-        <button
-          onClick={onOpenSecuritySpec}
-          className="px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-sky-400 hover:bg-slate-800 hover:text-sky-300 transition-colors flex items-center gap-1.5 font-medium"
-        >
-          <ShieldCheck className="w-4 h-4 text-sky-400" />
-          Cryptographic Specs
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onOpenSecuritySpec}
+            className="px-4 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-xs text-sky-400 hover:text-sky-300 transition-all flex items-center gap-2 font-medium shadow-sm"
+          >
+            <ShieldCheck className="w-4 h-4 text-sky-400" />
+            <span className="hidden sm:inline">Cryptographic Specs</span>
+          </button>
+        </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto py-6 z-10 items-center">
-        {/* Left Column: Security Architecture & Staff Roster Selector */}
-        <div className="lg:col-span-5 space-y-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-mono font-medium">
-            <Lock className="w-3.5 h-3.5" />
-            Zero-Trust Core Banking Authentication
-          </div>
-
-          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-100 tracking-tight leading-tight">
-            Customer & Staff Authentication Portal
-          </h1>
-
-          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
-            All customer and staff login requests are protected with Argon2id password hashing, email-delivered 2FA MFA codes, and AES-256 session encryption over TLS 1.3.
-          </p>
-
-          {/* Quick Staff & Customer Selection Roster */}
-          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4 text-sky-400" />
-                Staff & Customer Quick Access:
-              </span>
-              <span className="text-[10px] text-emerald-400 font-mono font-bold">2FA Active</span>
+      {/* MAIN CONTENT GRID */}
+      <main className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto py-8 z-10 items-stretch">
+        {/* LEFT COLUMN: HERO INTRO & PRESET ROSTER SELECTOR */}
+        <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-mono font-semibold">
+              <Lock className="w-3.5 h-3.5" />
+              Core Banking Security Gateway
             </div>
 
-            <div className="grid grid-cols-1 gap-2 text-xs max-h-56 overflow-y-auto pr-1">
-              {userRoster.map((usr, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleSelectUser(usr)}
-                  className={`p-2.5 rounded-xl text-left border transition-all flex items-center justify-between ${
-                    loginEmail === usr.email
-                      ? "bg-sky-500/10 border-sky-500/50 text-slate-100"
-                      : "bg-slate-950 hover:bg-slate-800/60 border-slate-800/80 text-slate-300"
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-100">{usr.name}</span>
-                      <span
-                        className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase font-mono ${
+            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+              Enterprise Access & <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-300 to-emerald-400">
+                Identity Authentication
+              </span>
+            </h1>
+
+            <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
+              Secure single sign-on portal for high-net-worth clients, retail banking customers, and threat intelligence security staff.
+            </p>
+
+            {/* Feature Pills */}
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-sky-400 shrink-0" />
+                <span className="text-slate-300 text-[11px] font-medium">Argon2id Hash</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-slate-300 text-[11px] font-medium">Gmail API 2FA</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Staff & Customer Preset Selection Roster */}
+          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-sky-400" />
+                <span className="text-xs font-bold text-slate-200">1-Click Quick Access Roster:</span>
+              </div>
+              {/* Category Filter Pills */}
+              <div className="flex items-center gap-1 bg-[#080E1A] p-0.5 rounded-lg border border-slate-800 text-[10px]">
+                {(["All", "Staff", "Customer"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setRosterFilter(cat)}
+                    className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                      rosterFilter === cat
+                        ? "bg-sky-500 text-slate-950"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 text-xs max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+              {filteredRoster.map((usr, i) => {
+                const isSelected = loginEmail.toLowerCase() === usr.email.toLowerCase();
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleSelectUser(usr)}
+                    className={`p-2.5 rounded-xl text-left border transition-all flex items-center justify-between group ${
+                      isSelected
+                        ? "bg-sky-500/15 border-sky-500/60 text-white shadow-md shadow-sky-500/5"
+                        : "bg-[#080E1A] hover:bg-slate-800/70 border-slate-800/80 text-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
                           usr.role === "Admin"
-                            ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
+                            ? "bg-sky-500/20 text-sky-300 border border-sky-500/30"
                             : usr.role === "Manager"
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                             : usr.role === "Auditor"
-                            ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                            : "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                         }`}
                       >
-                        {usr.userType === "Staff" ? usr.role : "Customer"}
-                      </span>
+                        {usr.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-100 truncate text-xs">{usr.name}</span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase font-mono shrink-0 ${
+                              usr.role === "Admin"
+                                ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
+                                : usr.role === "Manager"
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                : usr.role === "Auditor"
+                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                : "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                            }`}
+                          >
+                            {usr.userType === "Staff" ? usr.role : "Customer"}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate mt-0.5">{usr.title}</div>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{usr.title}</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-500 shrink-0" />
-                </button>
-              ))}
+                    <ChevronRight
+                      className={`w-4 h-4 shrink-0 transition-transform ${
+                        isSelected ? "text-sky-400 translate-x-0.5" : "text-slate-600 group-hover:text-slate-400"
+                      }`}
+                    />
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Auth Form Card */}
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl space-y-6 relative">
-          {/* Tab Switcher */}
-          <div className="grid grid-cols-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+        {/* RIGHT COLUMN: MAIN AUTH CARD */}
+        <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 relative flex flex-col justify-between backdrop-blur-md">
+          {/* TAB SWITCHER */}
+          <div className="grid grid-cols-2 p-1.5 bg-[#080E1A] rounded-2xl border border-slate-800">
             <button
               onClick={() => {
                 setTab("login");
                 setShowForgotPassword(false);
               }}
-              className={`py-2 text-xs font-bold rounded-lg transition-all ${
+              className={`py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
                 tab === "login" && !showForgotPassword
-                  ? "bg-sky-500 text-slate-950 shadow-md"
+                  ? "bg-sky-500 text-slate-950 shadow-lg shadow-sky-500/20"
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              Customer & Staff Login
+              <Lock className="w-3.5 h-3.5" />
+              <span>Customer & Staff Login</span>
             </button>
             <button
               onClick={() => {
                 setTab("register");
                 setShowForgotPassword(false);
               }}
-              className={`py-2 text-xs font-bold rounded-lg transition-all ${
+              className={`py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
                 tab === "register"
-                  ? "bg-sky-500 text-slate-950 shadow-md"
+                  ? "bg-sky-500 text-slate-950 shadow-lg shadow-sky-500/20"
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              New Customer Registration
+              <User className="w-3.5 h-3.5" />
+              <span>New Customer Registration</span>
             </button>
           </div>
 
           {/* FORGOT PASSWORD MODAL OVERLAY */}
           {showForgotPassword ? (
-            <div className="space-y-4 animate-in fade-in">
+            <div className="space-y-4 animate-in fade-in my-auto">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
                   <Key className="w-5 h-5 text-sky-400" />
@@ -721,14 +802,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 </div>
                 <button
                   onClick={() => setShowForgotPassword(false)}
-                  className="text-slate-400 hover:text-white p-1"
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {forgotError && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{forgotError}</span>
                 </div>
@@ -745,14 +826,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
                       Registered Email Address
                     </label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                      <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                       <input
                         type="email"
                         required
                         placeholder="vikramaditya.rao@bankguard.ai"
                         value={forgotEmail}
                         onChange={(e) => setForgotEmail(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                        className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -794,12 +875,12 @@ export const AuthView: React.FC<AuthViewProps> = ({
                         placeholder="6-digit OTP"
                         value={forgotOtp}
                         onChange={(e) => setForgotOtp(e.target.value)}
-                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono tracking-widest"
+                        className="flex-1 bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono tracking-widest"
                       />
                       <button
                         type="button"
                         onClick={handleAutoFillMfa}
-                        className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-xl flex items-center gap-1"
+                        className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-xl flex items-center gap-1.5 border border-slate-700"
                       >
                         <Zap className="w-3.5 h-3.5" />
                         Auto-Fill
@@ -817,7 +898,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                       placeholder="••••••••••••"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
+                      className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
                     />
                   </div>
 
@@ -841,7 +922,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
               )}
 
               {forgotStep === "success" && (
-                <div className="p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-3">
+                <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-3">
                   <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto animate-bounce" />
                   <h4 className="font-bold text-slate-100 text-sm">Password Updated Successfully!</h4>
                   <p className="text-xs text-slate-300">
@@ -854,7 +935,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                       setForgotStep("email");
                       setTab("login");
                     }}
-                    className="px-4 py-2 bg-sky-500 text-slate-950 rounded-lg text-xs font-bold"
+                    className="px-5 py-2 bg-sky-500 text-slate-950 rounded-xl text-xs font-bold"
                   >
                     Proceed to Login
                   </button>
@@ -864,15 +945,25 @@ export const AuthView: React.FC<AuthViewProps> = ({
           ) : tab === "login" ? (
             /* LOGIN FORM */
             <form onSubmit={handleLogin} className="space-y-4">
+              {sessionExpiredNotice && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs flex items-center gap-3 animate-pulse">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                  <div>
+                    <div className="font-bold text-amber-200">Session Expired</div>
+                    <div className="text-[11px] leading-relaxed mt-0.5">{sessionExpiredNotice}</div>
+                  </div>
+                </div>
+              )}
+
               {loginError && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{loginError}</span>
                 </div>
               )}
 
               {/* GOOGLE OAUTH & GMAIL DISPATCH STATUS BAR */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-sky-500/30 space-y-2">
+              <div className="p-3.5 rounded-2xl bg-[#080E1A] border border-sky-500/30 space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -887,17 +978,17 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   </div>
                   {googleAccessToken ? (
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> OAuth Active
+                      <CheckCircle2 className="w-3 h-3" /> OAuth Connected
                     </span>
                   ) : (
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">
-                      Offline Mode
+                      Simulation Mode
                     </span>
                   )}
                 </div>
 
                 {googleUser ? (
-                  <div className="flex justify-between items-center text-[11px] bg-slate-900 p-2 rounded-lg border border-slate-800">
+                  <div className="flex justify-between items-center text-[11px] bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
                     <span className="text-slate-300 font-mono truncate">
                       Connected: <strong>{googleUser.email}</strong>
                     </span>
@@ -913,15 +1004,15 @@ export const AuthView: React.FC<AuthViewProps> = ({
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] text-slate-400 leading-tight">
-                      Sign in with Google to enable <strong>direct Gmail API MFA dispatch</strong> for Admin, Manager, Auditor & Employees.
+                      Sign in with Google to enable <strong>direct Gmail API MFA dispatch</strong> for real inbox delivery.
                     </p>
                     <button
                       type="button"
                       onClick={handleGoogleSignIn}
                       disabled={isGoogleSigningIn}
-                      className="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-bold transition-all shrink-0 flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 text-xs font-bold transition-all shrink-0 flex items-center gap-1.5"
                     >
                       {isGoogleSigningIn ? (
                         <span>Connecting...</span>
@@ -933,7 +1024,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 )}
 
                 {gmailStatusNotice && (
-                  <div className="text-[11px] font-mono text-sky-300 bg-sky-950/60 p-2 rounded-lg border border-sky-800/80 flex items-center gap-1.5">
+                  <div className="text-[11px] font-mono text-sky-300 bg-sky-950/60 p-2 rounded-xl border border-sky-800/80 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <span>{gmailStatusNotice}</span>
                   </div>
@@ -941,7 +1032,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
               </div>
 
               {mfaEmailSentNotice && (
-                <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs flex items-center justify-between">
+                <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Inbox className="w-4 h-4 text-sky-400" />
                     <span>{mfaEmailSentNotice}</span>
@@ -957,11 +1048,11 @@ export const AuthView: React.FC<AuthViewProps> = ({
               )}
 
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400 font-medium">Select Access Security Context:</span>
+                <span className="text-slate-400 font-medium">Select Security Context Role:</span>
                 <select
                   value={loginRole}
                   onChange={(e) => setLoginRole(e.target.value as UserRole)}
-                  className="bg-slate-950 text-sky-400 font-bold border border-slate-800 rounded px-2.5 py-1 focus:outline-none"
+                  className="bg-[#080E1A] text-sky-400 font-bold border border-slate-800 rounded-xl px-3 py-1.5 focus:outline-none focus:border-sky-500 text-xs"
                 >
                   <option value="Admin">Admin (CISO & Executive)</option>
                   <option value="Manager">Manager (SecOps Threat Intel)</option>
@@ -975,14 +1066,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                   <input
                     type="email"
                     required
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="vikramaditya.rao@bankguard.ai"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                    className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -1001,25 +1092,25 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                   <input
                     type={showPassword ? "text" : "password"}
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-9 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
+                    className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 pl-10 pr-10 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3.5 top-3 text-slate-500 hover:text-slate-300"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              {/* MFA Code Section with Email Service Trigger */}
+              {/* MFA Code Section */}
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-xs text-slate-300 font-medium">
@@ -1029,15 +1120,15 @@ export const AuthView: React.FC<AuthViewProps> = ({
                     type="button"
                     onClick={handleTriggerMfaEmail}
                     disabled={isSendingMfaEmail}
-                    className="text-[11px] text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1"
+                    className="text-[11px] text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 transition-colors"
                   >
                     <Send className="w-3 h-3" />
-                    {isSendingMfaEmail ? "Dispatching Email..." : "📩 Dispatch MFA Code to Email"}
+                    {isSendingMfaEmail ? "Dispatching..." : "📩 Dispatch Code to Email"}
                   </button>
                 </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <KeyRound className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                    <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                     <input
                       type="text"
                       maxLength={6}
@@ -1045,13 +1136,13 @@ export const AuthView: React.FC<AuthViewProps> = ({
                       value={loginMfaCode}
                       onChange={(e) => setLoginMfaCode(e.target.value)}
                       placeholder="Enter 6-digit MFA code"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono tracking-widest"
+                      className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono tracking-widest transition-colors"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={handleAutoFillMfa}
-                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold text-xs rounded-xl flex items-center gap-1 border border-slate-700 transition-colors"
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-slate-700 transition-colors"
                     title="Auto fill MFA code from received email"
                   >
                     <Zap className="w-3.5 h-3.5" />
@@ -1061,21 +1152,24 @@ export const AuthView: React.FC<AuthViewProps> = ({
               </div>
 
               {/* Security Handshake Badge */}
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between font-mono">
+              <div className="p-3 rounded-xl bg-[#080E1A] border border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between font-mono">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>CSRF & Session Token:</span>
+                  <span>CSRF & Token Status:</span>
                 </div>
-                <span className="text-sky-400 font-bold">X-CSRF-Token Enabled</span>
+                <span className="text-sky-400 font-bold">HMAC-SHA256 Active</span>
               </div>
 
               <button
                 type="submit"
                 disabled={isAuthenticating}
-                className="w-full py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-colors"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-sky-400 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-sky-500/20 transition-all transform active:scale-[0.99]"
               >
                 {isAuthenticating ? (
-                  <span>Executing Session Handshake & Validating MFA...</span>
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                    Session Handshake & Validating MFA...
+                  </span>
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
@@ -1088,18 +1182,18 @@ export const AuthView: React.FC<AuthViewProps> = ({
             /* NEW CUSTOMER REGISTER FORM */
             <form onSubmit={handleRegister} className="space-y-4">
               {regError && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{regError}</span>
                 </div>
               )}
 
               {registeredSuccess ? (
-                <div className="p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-2 animate-in fade-in">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto animate-bounce" />
-                  <h3 className="font-bold text-slate-100 text-sm">Customer Onboarded & Registered!</h3>
-                  <p className="text-xs text-slate-300">
-                    Verification Email & 2FA Token dispatched to <span className="text-sky-400 font-bold">{regEmail}</span>. Redirecting to Login...
+                <div className="p-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-3 animate-in fade-in my-auto">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
+                  <h3 className="font-bold text-white text-base">Customer Account Tokenized!</h3>
+                  <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                    Verification Email & 2FA Token dispatched to <span className="text-sky-400 font-bold">{regEmail}</span>. Redirecting to login portal...
                   </p>
                 </div>
               ) : (
@@ -1110,14 +1204,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
                         Full Name / Username
                       </label>
                       <div className="relative">
-                        <User className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                        <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                         <input
                           type="text"
                           required
                           placeholder="Ananya Verma"
                           value={regUsername}
                           onChange={(e) => setRegUsername(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                          className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1127,14 +1221,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
                         Email Address
                       </label>
                       <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                        <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                         <input
                           type="email"
                           required
                           placeholder="ananya.verma@outlook.com"
                           value={regEmail}
                           onChange={(e) => setRegEmail(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                          className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1146,14 +1240,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
                         Mobile Phone Number
                       </label>
                       <div className="relative">
-                        <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                        <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                         <input
                           type="tel"
                           required
                           placeholder="+91 98765 43210"
                           value={regPhone}
                           onChange={(e) => setRegPhone(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                          className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 pl-10 pr-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1168,7 +1262,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                         placeholder="5542-8819-2041"
                         value={regGovtId}
                         onChange={(e) => setRegGovtId(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
+                        className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
                       />
                     </div>
                   </div>
@@ -1179,7 +1273,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                       <select
                         value={regAccountType}
                         onChange={(e) => setRegAccountType(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                        className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
                       >
                         <option value="Savings">Savings Account</option>
                         <option value="Current">Current Business Account</option>
@@ -1198,7 +1292,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                         placeholder="••••••••••••"
                         value={regPassword}
                         onChange={(e) => setRegPassword(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
+                        className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
                       />
                     </div>
                   </div>
@@ -1215,13 +1309,13 @@ export const AuthView: React.FC<AuthViewProps> = ({
                         placeholder="••••••••••••"
                         value={regConfirmPassword}
                         onChange={(e) => setRegConfirmPassword(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
+                        className="w-full bg-[#080E1A] border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-slate-100 focus:border-sky-500 focus:outline-none font-mono"
                       />
                     </div>
 
                     <div className="flex flex-col justify-end space-y-1">
                       <div className="text-[10px] text-slate-400 flex justify-between">
-                        <span>Password Security Rating:</span>
+                        <span>Password Strength:</span>
                         <span className="font-mono text-sky-400">
                           {pwdStrength === 0 && "Too Weak"}
                           {pwdStrength === 1 && "Weak"}
@@ -1230,7 +1324,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                           {pwdStrength === 4 && "Military Grade"}
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-1 h-1.5 w-full bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                      <div className="grid grid-cols-4 gap-1 h-2 w-full bg-[#080E1A] rounded-full overflow-hidden p-0.5 border border-slate-800">
                         <div className={`rounded-full ${pwdStrength >= 1 ? "bg-red-500" : "bg-slate-800"}`}></div>
                         <div className={`rounded-full ${pwdStrength >= 2 ? "bg-amber-500" : "bg-slate-800"}`}></div>
                         <div className={`rounded-full ${pwdStrength >= 3 ? "bg-sky-400" : "bg-slate-800"}`}></div>
@@ -1240,14 +1334,14 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   </div>
 
                   {/* Email MFA Integration Notice */}
-                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
+                  <div className="p-3 rounded-2xl bg-[#080E1A] border border-slate-800 flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
                       <Inbox className="w-5 h-5" />
                     </div>
                     <div className="text-xs space-y-0.5">
-                      <div className="font-bold text-slate-200">Automated 2FA Email Dispatcher Integrated</div>
+                      <div className="font-bold text-slate-200">Automated 2FA Email Dispatcher</div>
                       <div className="text-[10px] text-slate-400">
-                        Upon clicking register, an instant verification email with your single-use 6-digit MFA passcode will be dispatched to your inbox.
+                        An instant verification email with your 6-digit MFA passcode will be dispatched upon submitting.
                       </div>
                     </div>
                   </div>
@@ -1255,10 +1349,13 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   <button
                     type="submit"
                     disabled={isRegistering}
-                    className="w-full py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-colors"
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-sky-400 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-sky-500/20 transition-all transform active:scale-[0.99]"
                   >
                     {isRegistering ? (
-                      <span>Tokenizing & Registering Customer Account...</span>
+                      <span className="flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                        Tokenizing & Registering Account...
+                      </span>
                     ) : (
                       <>
                         <User className="w-4 h-4" />
@@ -1273,10 +1370,10 @@ export const AuthView: React.FC<AuthViewProps> = ({
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="max-w-6xl mx-auto w-full flex flex-col md:flex-row justify-between items-center text-[11px] text-slate-500 border-t border-slate-800/80 pt-4 z-10 gap-2">
+      {/* FOOTER */}
+      <footer className="max-w-6xl mx-auto w-full flex flex-col md:flex-row justify-between items-center text-[11px] text-slate-500 border-t border-slate-800/60 pt-4 z-10 gap-2">
         <div>© 2026 BankGuard.ai • Enterprise Financial Threat Platform</div>
-        <div className="flex gap-4 font-mono">
+        <div className="flex gap-4 font-mono text-[10px]">
           <span>TLS 1.3 Cipher: ECDHE-RSA-AES256-GCM-SHA384</span>
           <span>FIPS 140-2 Level 3</span>
         </div>

@@ -102,7 +102,7 @@ export function predictFraudRandomForest(
     featureScores.push({
       name: "New Device Fingerprint",
       score: 24,
-      text: `First time seeing device ${features.deviceId.slice(0, 8)}...`,
+      text: `First time seeing device ${(features.deviceId || "DEV-UNKNOWN").slice(0, 8)}...`,
     });
   }
 

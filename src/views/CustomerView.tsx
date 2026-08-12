@@ -232,7 +232,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    cust.name.slice(0, 2).toUpperCase()
+                    (cust.name || "CU").slice(0, 2).toUpperCase()
                   )}
                 </div>
                 <div>

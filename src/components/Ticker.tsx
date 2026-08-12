@@ -1,37 +1,61 @@
 import React from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, X } from "lucide-react";
 
-interface TickerProps {
-  alerts: string[];
+interface EmergencyBannerProps {
+  emergency?: {
+    accountNumber: string;
+    amount: number;
+    riskScore: number;
+    message?: string;
+  } | null;
+  onReview?: () => void;
+  onDismiss?: () => void;
 }
 
-export const Ticker: React.FC<TickerProps> = ({ alerts }) => {
-  const defaultAlerts = [
-    "ALERT: Multiple failed login attempts originating from IP 192.168.1.105 (Kolkata, WB) targeting account #5512-9901-8811.",
-    "ALERT: Suspicious wire transfer of ₹15,400 flagged for manual review on account #4592-0012-8921.",
-    "ALERT: Velocity check failed for card ending in 4492 - 8 transactions in 45 seconds.",
-    "ALERT: Impossible travel detected - Login in Bengaluru, KA followed by transaction in Guwahati, AS (2,800 km).",
-  ];
-
-  const list = alerts.length > 0 ? alerts : defaultAlerts;
+export const Ticker: React.FC<EmergencyBannerProps> = ({
+  emergency = {
+    accountNumber: "•••• 4921",
+    amount: 82000,
+    riskScore: 94,
+    message: "HIGH-RISK TRANSACTION DETECTED",
+  },
+  onReview,
+  onDismiss,
+}) => {
+  if (!emergency) return null;
 
   return (
-    <div className="fixed top-14 w-full z-40 border-b border-[#334155] bg-[#0d1c2d] text-[#c6c6cd] font-mono text-xs h-8 flex items-center overflow-hidden">
-      <div className="bg-[#EF4444] text-white px-3 h-full flex items-center gap-1.5 font-bold tracking-wider z-10 shrink-0 shadow-md">
-        <AlertCircle className="w-3.5 h-3.5 animate-pulse" />
-        <span>LIVE THREAT FEED</span>
+    <div className="fixed top-14 w-full z-40 bg-rose-500/10 border-b border-rose-500/30 text-slate-100 font-mono text-xs py-2 px-4 flex items-center justify-between backdrop-blur-md">
+      <div className="flex items-center gap-3">
+        <span className="flex items-center gap-1.5 font-bold text-rose-400 bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/30 text-[11px]">
+          <AlertTriangle className="w-3.5 h-3.5 animate-pulse" />
+          <span>⚠ {emergency.message || "HIGH-RISK TRANSACTION DETECTED"}</span>
+        </span>
+        <span className="text-slate-300 text-[11px] hidden sm:inline">
+          Account <strong className="text-white">{emergency.accountNumber}</strong> · ₹
+          {emergency.amount.toLocaleString()} · Risk{" "}
+          <strong className="text-rose-400">{emergency.riskScore}</strong>
+        </span>
       </div>
 
-      <div className="ticker-wrap flex-1 overflow-hidden relative h-full flex items-center">
-        <div className="animate-ticker flex whitespace-nowrap gap-8 pl-4">
-          {list.concat(list).map((item, idx) => (
-            <span key={idx} className="inline-flex items-center gap-2">
-              <span className="text-[#EF4444] font-bold">ALERT:</span>
-              <span className="text-[#d4e4fa]">{item.replace("ALERT:", "")}</span>
-              <span className="text-[#334155] mx-2">|</span>
-            </span>
-          ))}
-        </div>
+      <div className="flex items-center gap-3">
+        {onReview && (
+          <button
+            onClick={onReview}
+            className="px-2.5 py-1 rounded bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-colors"
+          >
+            <span>Review</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="text-slate-400 hover:text-white p-1 rounded"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   FileCheck2,
   Search,
@@ -116,48 +117,58 @@ export const AuditLogView: React.FC<AuditLogViewProps> = ({ logs }) => {
             </thead>
 
             <tbody className="divide-y divide-[#334155] text-xs">
-              {filtered.map((log) => (
-                <tr key={log.id} className="hover:bg-[#334155]/60 transition-colors">
-                  <td className="p-4 font-mono text-[11px] text-[#909097] whitespace-nowrap">
-                    {log.timestamp}
-                  </td>
+              <AnimatePresence mode="popLayout">
+                {filtered.map((log) => (
+                  <motion.tr
+                    key={log.id}
+                    layout
+                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="hover:bg-[#334155]/60 transition-colors"
+                  >
+                    <td className="p-4 font-mono text-[11px] text-[#909097] whitespace-nowrap">
+                      {log.timestamp}
+                    </td>
 
-                  <td className="p-4">
-                    <div className="font-bold text-[#d4e4fa]">{log.username}</div>
-                    <div className="text-[10px] text-[#38BDF8]">{log.role}</div>
-                  </td>
+                    <td className="p-4">
+                      <div className="font-bold text-[#d4e4fa]">{log.username}</div>
+                      <div className="text-[10px] text-[#38BDF8]">{log.role}</div>
+                    </td>
 
-                  <td className="p-4 font-mono text-[11px] text-[#c6c6cd]">
-                    <div>{log.ip}</div>
-                    <div className="text-[10px] text-[#909097] truncate max-w-[150px]">
-                      {log.browser}
-                    </div>
-                  </td>
+                    <td className="p-4 font-mono text-[11px] text-[#c6c6cd]">
+                      <div>{log.ip}</div>
+                      <div className="text-[10px] text-[#909097] truncate max-w-[150px]">
+                        {log.browser}
+                      </div>
+                    </td>
 
-                  <td className="p-4 font-semibold text-[#d4e4fa]">
-                    {log.action}
-                  </td>
+                    <td className="p-4 font-semibold text-[#d4e4fa]">
+                      {log.action}
+                    </td>
 
-                  <td className="p-4 text-[11px] space-y-0.5">
-                    <div className="text-[#909097] line-clamp-1">{log.previousValue}</div>
-                    <div className="text-[#10B981] line-clamp-1 font-mono">{log.newValue}</div>
-                  </td>
+                    <td className="p-4 text-[11px] space-y-0.5">
+                      <div className="text-[#909097] line-clamp-1">{log.previousValue}</div>
+                      <div className="text-[#10B981] line-clamp-1 font-mono">{log.newValue}</div>
+                    </td>
 
-                  <td className="p-4 text-center">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                        log.riskTag === "CRITICAL"
-                          ? "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30"
-                          : log.riskTag === "ELEVATED"
-                          ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30"
-                          : "bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30"
-                      }`}
-                    >
-                      {log.riskTag}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    <td className="p-4 text-center">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                          log.riskTag === "CRITICAL"
+                            ? "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30"
+                            : log.riskTag === "ELEVATED"
+                            ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30"
+                            : "bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30"
+                        }`}
+                      >
+                        {log.riskTag}
+                      </span>
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
             </tbody>
           </table>
         </div>
