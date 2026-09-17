@@ -67,6 +67,15 @@
 
 ## 🛠️ Local Development & Setup Guide
 
+### ⚡ Quick Start (Windows)
+Double-click `start.bat` or run:
+```cmd
+start.bat
+```
+This batch script automatically verifies your environment, initializes `.env`, installs all required dependencies (Node.js & Python ML packages), starts both the Express backend API and Vite frontend dev server on port 3000, and opens your browser automatically to `http://localhost:3000`.
+
+---
+
 ### 1. Prerequisites
 - Node.js `v20.x` or higher
 - `npm` v10+
